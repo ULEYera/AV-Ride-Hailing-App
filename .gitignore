@@ -1,0 +1,27 @@
+# --- Gradle / Android ---
+.gradle/
+**/build/
+
+# Local SDK/paths (never commit)
+local.properties
+**/local.properties
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Kotlin
+.kotlin/
+
+# OS / tooling
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Archives
+*.zip
+
+# Prevent committing nested repos
+**/.git/
