@@ -4,6 +4,8 @@ sealed class AppState {
     object Onboarding : AppState()
     object Home : AppState()
     data class Booking(val destination: com.example.avaride_1.domain.model.Destination) : AppState()
+    object Payment : AppState() // New
+    object BookingStatus : AppState() // New
     object ARWayfinding : AppState()
     object NFCUnlock : AppState()
     data class InRide(val ride: com.example.avaride_1.domain.model.Ride) : AppState()
@@ -12,11 +14,14 @@ sealed class AppState {
 }
 
 sealed class Screen(val route: String) {
+    object Login : Screen("login")
     object Onboarding : Screen("onboarding")
     object Home : Screen("home")
     object DestinationSearch : Screen("destination_search")
     object PickupSelection : Screen("pickup_selection")
     object BookingConfirmation : Screen("booking_confirmation")
+    object Payment : Screen("payment") // New
+    object BookingStatus : Screen("booking_status") // New
     object Booking : Screen("booking")
     object ARWayfinding : Screen("ar_wayfinding")
     object NFCUnlock : Screen("nfc_unlock")

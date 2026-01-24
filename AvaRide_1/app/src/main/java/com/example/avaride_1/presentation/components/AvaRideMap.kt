@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -117,5 +118,70 @@ fun BookingRouteMap(
         showRoute = true,
         modifier = modifier
     )
+}
+
+/**
+ * Live Ride Map showing moving vehicle
+ */
+@Composable
+fun LiveRideMap(
+    vehicleLat: Double,
+    vehicleLng: Double,
+    destinationLat: Double,
+    destinationLng: Double,
+    modifier: Modifier = Modifier
+) {
+    val vehiclePos = LatLng(vehicleLat, vehicleLng)
+    val destPos = LatLng(destinationLat, destinationLng)
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(vehiclePos, 16f)
+    }
+
+    // smooth camera follow
+    LaunchedEffect(vehiclePos) {
+        cameraPositionState.animate(
+            CameraUpdateFactory.newLatLng(vehiclePos),
+            1000 // 1 sec animation
+        )
+    }
+
+    GoogleMap(
+        modifier = modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+        properties = MapProperties(
+            isMyLocationEnabled = false,
+            mapStyleOptions = null
+        ),
+        uiSettings = MapUiSettings(
+            zoomControlsEnabled = false,
+            myLocationButtonEnabled = false,
+            compassEnabled = false
+        )
+    ) {
+        // Vehicle Marker (Car)
+        Marker(
+            state = MarkerState(position = vehiclePos),
+            title = "Your AV",
+            snippet = "On the way home",
+            icon = com.google.android.gms.maps.model.BitmapDescriptorFactory
+                .defaultMarker(com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_AZURE)
+        )
+
+        // Destination Marker
+        Marker(
+            state = MarkerState(position = destPos),
+            title = "Destination",
+            icon = com.google.android.gms.maps.model.BitmapDescriptorFactory
+                .defaultMarker(com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_RED)
+        )
+
+        // Polyline to destination (from vehicle)
+        Polyline(
+            points = listOf(vehiclePos, destPos),
+             color = androidx.compose.ui.graphics.Color(0xFF0A84FF),
+            width = 10f
+        )
+    }
 }
 

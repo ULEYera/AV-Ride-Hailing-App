@@ -2,18 +2,18 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.services)
 }
 
 android {
     namespace = "com.example.avaride_1"
-    compileSdk {
-        version = release(36)
-    }
+    namespace = "com.example.avaride_1"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.avaride_1"
+        applicationId = "com.example.avaride"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -22,6 +22,9 @@ android {
         // BuildConfig for API keys
         buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\"")
         buildConfigField("String", "GOOGLE_MAPS_API_KEY", "\"${project.findProperty("GOOGLE_MAPS_API_KEY") ?: ""}\"")
+        
+        // Manifest placeholders
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = project.findProperty("GOOGLE_MAPS_API_KEY") as String? ?: ""
     }
 
     buildTypes {
@@ -55,6 +58,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)

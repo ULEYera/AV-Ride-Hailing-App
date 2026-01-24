@@ -1,5 +1,6 @@
 package com.example.avaride_1.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -39,22 +40,62 @@ fun AvaRideApp() {
     var showSettings by remember { mutableStateOf(false) }
 
     // Initialize services
-    val geminiService = remember {
-        GeminiPredictiveService(BuildConfig.GEMINI_API_KEY)
+    // Services & Repositories
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val geminiService = remember { GeminiPredictiveService(BuildConfig.GEMINI_API_KEY) }
+    
+    // Database & Refs
+    val firestoreRepository = remember { com.example.avaride_1.data.repository.FirestoreRepository() }
+    val userPrefs = remember { com.example.avaride_1.data.repository.UserPreferencesRepository(context) }
+    
+    // Session State
+    var isCheckingSession by remember { mutableStateOf(true) }
+    var startDest by remember { mutableStateOf(Screen.Login.route) }
+
+    // Check session on launch
+    LaunchedEffect(Unit) {
+        userPrefs.userPhoneNumber.collect { phone ->
+            if (!phone.isNullOrBlank()) {
+                startDest = Screen.Home.route
+            }
+            isCheckingSession = false
+        }
     }
 
-    // ViewModels (in production, use Hilt/Koin for DI)
+    if (isCheckingSession) {
+        // Loading Splash
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            PulsatingOrb()
+        }
+        return
+    }
+
+    // ViewModels
+    val loginViewModel = remember { com.example.avaride_1.presentation.screens.login.LoginViewModel(firestoreRepository, userPrefs) }
     val homeViewModel = remember { HomeViewModel(geminiService) }
     val bookingViewModel = remember { BookingViewModel() }
-    val inRideViewModel = remember { InRideViewModel() }
-    val settingsViewModel = remember { SettingsViewModel() }
+    val inRideViewModel = remember { InRideViewModel(firestoreRepository, userPrefs) }
+    val settingsViewModel = remember { SettingsViewModel(firestoreRepository, userPrefs) }
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Onboarding.route
+        startDestination = startDest
     ) {
+        composable(Screen.Login.route) {
+            com.example.avaride_1.presentation.screens.login.LoginScreen(
+                viewModel = loginViewModel,
+                onLoginSuccess = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Onboarding.route) {
-            OnboardingScreen(
+            // Deprecated/skipped if Login is used, or can flow from Login -> Onboarding -> Home
+            // For now, let's keep it simple: Login -> Home
+             OnboardingScreen(
                 onComplete = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
@@ -162,12 +203,8 @@ fun AvaRideApp() {
                     pickup = pickup!!,
                     destination = destination!!,
                     onConfirm = {
-                        // Clear booking data after confirmation
-                        bookingViewModel.clearBookingData()
-                        navController.navigate(Screen.NFCUnlock.route) {
-                            // Clear the stack up to home
-                            popUpTo(Screen.Home.route) { inclusive = false }
-                        }
+                        // Navigate to Payment instead of clearing data
+                        navController.navigate(Screen.Payment.route)
                     },
                     onBack = {
                         navController.popBackStack()
@@ -213,6 +250,38 @@ fun AvaRideApp() {
             }
         }
 
+        composable(Screen.Payment.route) {
+             com.example.avaride_1.presentation.screens.payment.PaymentScreen(
+                 totalFare = 12.50, // Hardcoded for MVP
+                 onPaymentSuccess = {
+                     navController.navigate(Screen.BookingStatus.route)
+                 },
+                 onBack = {
+                     navController.popBackStack()
+                 }
+             )
+        }
+
+        composable(Screen.BookingStatus.route) {
+            val destination by bookingViewModel.destination.collectAsState()
+            
+            if (destination != null) {
+                com.example.avaride_1.presentation.screens.confirm.BookingStatusScreen(
+                    destination = destination!!,
+                    onUnlock = {
+                        // Clear booking data only after successful unlock/boarding logic starts
+                         bookingViewModel.clearBookingData()
+                         navController.navigate(Screen.NFCUnlock.route) {
+                             popUpTo(Screen.Home.route) { inclusive = false }
+                         }
+                    }
+                )
+            } else {
+                 // Fallback if destination lost (shouldn't happen in single session)
+                 navController.popBackStack()
+            }
+        }
+
         composable(Screen.Booking.route) {
             // Booking screen would show AR wayfinding and vehicle tracking
             // For now, simulate booking flow
@@ -248,10 +317,15 @@ fun AvaRideApp() {
                 }
             )
 
-            // Simulate ride completion
-            LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(10000)
-                navController.navigate(Screen.RideSummary.route)
+            // Simulate ride completion based on ViewModel state
+            val uiState by inRideViewModel.uiState.collectAsState()
+            
+            LaunchedEffect(uiState.isRideComplete) {
+                if (uiState.isRideComplete) {
+                    // Small delay for UX
+                    kotlinx.coroutines.delay(1000)
+                    navController.navigate(Screen.RideSummary.route)
+                }
             }
         }
 

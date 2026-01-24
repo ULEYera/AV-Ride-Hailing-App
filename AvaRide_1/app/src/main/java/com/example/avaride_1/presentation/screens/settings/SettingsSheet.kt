@@ -147,6 +147,17 @@ fun SettingsSheet(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                Button(
+                    onClick = { viewModel.logout() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30)), // Red
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Log Out", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
                 QuickSettingsList(
                     preferences = uiState.preferences,
                     onPreferenceChange = { key, value ->

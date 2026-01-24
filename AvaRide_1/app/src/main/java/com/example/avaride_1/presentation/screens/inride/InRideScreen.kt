@@ -1,11 +1,13 @@
 package com.example.avaride_1.presentation.screens.inride
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,16 +31,48 @@ fun InRideScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // Start Journey Simulation on entering screen
+    LaunchedEffect(Unit) {
+        viewModel.startJourney()
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        GlowingMeshGradient(
-            colors = listOf(
-                Color(0xFF0A0A0F),
-                Color(0xFF1A1A2E),
-                Color(0xFF0F1419),
-                Color(0xFF1F1F2E)
-            )
+        // 1. Live Map Background
+        com.example.avaride_1.presentation.components.LiveRideMap(
+            vehicleLat = uiState.currentLat,
+            vehicleLng = uiState.currentLng,
+            destinationLat = 1.3644, // Hardcoded Changi for demo, should match VM end
+            destinationLng = 103.9915,
+            modifier = Modifier.fillMaxSize()
         )
 
+        // 2. Gradients for visibility
+        // Top gradient
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(160.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color.Black.copy(alpha=0.8f), Color.Transparent)
+                    )
+                )
+        )
+        // Bottom gradient
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(300.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha=0.9f))
+                    )
+                )
+        )
+
+        // 3. UI Overlay
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -47,29 +81,41 @@ fun InRideScreen(
         ) {
             Spacer(modifier = Modifier.height(40.dp))
 
+            // Trip Info
             Text(
                 text = uiState.destination,
                 color = Color.White,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = "${uiState.remainingMinutes} min away",
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 18.sp
+                text = "${uiState.remainingMinutes} min to destination",
+                color = Color(0xFF30D158),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
-            JourneyProgressRing(
-                progress = uiState.progress,
-                modifier = Modifier.size(240.dp)
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
+            // Progress Bar (replacing huge ring, making it subtle)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally, 
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
+            ) {
+                 Text(
+                    text = "${(uiState.progress * 100).toInt()}% Trip Complete",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { uiState.progress },
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color = Color(0xFF0A84FF),
+                    trackColor = Color.White.copy(alpha=0.2f),
+                )
+            }
 
             EnvironmentControls(
                 temperature = uiState.temperature,
@@ -78,11 +124,9 @@ fun InRideScreen(
                 onLightingChange = { viewModel.updateLighting(it) }
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
             EmergencyStopButton(onClick = onEmergencyStop)
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

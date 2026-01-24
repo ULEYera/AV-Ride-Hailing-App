@@ -7,6 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
+import androidx.lifecycle.viewModelScope
+import com.example.avaride_1.data.repository.FirestoreRepository
+import com.example.avaride_1.data.repository.UserPreferencesRepository
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+
 data class SettingsUiState(
     val userName: String = "John Doe",
     val quietMode: Boolean = false,
@@ -19,9 +25,38 @@ data class SettingsUiState(
     )
 )
 
-class SettingsViewModel : ViewModel() {
+class SettingsViewModel(
+    private val firestoreRepository: FirestoreRepository? = null,
+    private val userPrefs: UserPreferencesRepository? = null
+) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    init {
+        loadUserProfile()
+    }
+
+    private fun loadUserProfile() {
+        viewModelScope.launch {
+            try {
+                val phoneNumber = userPrefs?.userPhoneNumber?.firstOrNull()
+                if (!phoneNumber.isNullOrBlank() && firestoreRepository != null) {
+                    val user = firestoreRepository.getUser(phoneNumber)
+                    if (user != null && user.name.isNotBlank()) {
+                         _uiState.update { it.copy(userName = user.name) }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            userPrefs?.clearUser()
+        }
+    }
 
     fun toggleQuietMode() {
         _uiState.update { it.copy(quietMode = !it.quietMode) }
