@@ -38,8 +38,8 @@ class BookingViewModel : ViewModel() {
     fun setRideActive(isActive: Boolean) {
         _isRideActive.value = isActive
         if (isActive && _arrivalTime.value == null) {
-            // Start timer if not already set (2 minutes default)
-            _arrivalTime.value = System.currentTimeMillis() + 2 * 60 * 1000
+            // Start timer if not already set (20 seconds default)
+            _arrivalTime.value = System.currentTimeMillis() + 20 * 1000
         } else if (!isActive) {
             _arrivalTime.value = null
         }
@@ -63,4 +63,3 @@ class BookingViewModel : ViewModel() {
         return if (remaining > 0) remaining else 0
     }
 }
-

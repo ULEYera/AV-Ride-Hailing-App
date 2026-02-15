@@ -339,11 +339,10 @@ fun AvaRideApp() {
                     destination = destination!!,
                     arrivalTime = arrivalTime,
                     onUnlock = {
-                        // Clear booking data only after successful unlock/boarding logic starts
-                         bookingViewModel.clearBookingData()
-                         navController.navigate(Screen.NFCUnlock.route) {
-                             popUpTo(Screen.Home.route) { inclusive = false }
-                         }
+                        // Navigate to NFC unlock first; clear booking data after successful unlock.
+                        navController.navigate(Screen.NFCUnlock.route) {
+                            popUpTo(Screen.Home.route) { inclusive = false }
+                        }
                     },
                     onBack = {
                         // Go back to Home explicitly as per request
@@ -376,11 +375,80 @@ fun AvaRideApp() {
         composable(Screen.NFCUnlock.route) {
             com.example.avaride_1.presentation.screens.nfc.NFCUnlockScreen(
                 onUnlocked = {
+                    bookingViewModel.clearBookingData()
                     navController.navigate(Screen.InRide.route)
                 },
                 onSkip = {
                     // Allow skipping if NFC not available (demo mode)
+                    bookingViewModel.clearBookingData()
                     navController.navigate(Screen.InRide.route)
+                }
+            )
+        }
+
+        // Secure NFC Unlock with session management
+        composable(
+            route = Screen.SecureNFCUnlock.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("tripId") { type = androidx.navigation.NavType.StringType },
+                androidx.navigation.navArgument("vehicleId") { type = androidx.navigation.NavType.StringType },
+                androidx.navigation.navArgument("userId") { type = androidx.navigation.NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tripId = backStackEntry.arguments?.getString("tripId") ?: ""
+            val vehicleId = backStackEntry.arguments?.getString("vehicleId") ?: ""
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+
+            com.example.avaride_1.presentation.screens.nfc.SecureNFCUnlockScreen(
+                tripId = tripId,
+                vehicleId = vehicleId,
+                userId = userId,
+                vehicleName = "AvaRide AV",
+                vehiclePlate = "SGP $vehicleId",
+                onUnlocked = {
+                    navController.navigate(Screen.InRide.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                },
+                onSkip = {
+                    navController.navigate(Screen.InRide.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        // QR Code Unlock fallback
+        composable(
+            route = Screen.QRUnlock.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("tripId") { type = androidx.navigation.NavType.StringType },
+                androidx.navigation.navArgument("vehicleId") { type = androidx.navigation.NavType.StringType },
+                androidx.navigation.navArgument("userId") { type = androidx.navigation.NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tripId = backStackEntry.arguments?.getString("tripId") ?: ""
+            val vehicleId = backStackEntry.arguments?.getString("vehicleId") ?: ""
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+
+            com.example.avaride_1.presentation.screens.nfc.QRUnlockScreen(
+                tripId = tripId,
+                vehicleId = vehicleId,
+                userId = userId,
+                sessionToken = "demo_token_${System.currentTimeMillis()}",
+                expiresAt = System.currentTimeMillis() + 5 * 60 * 1000, // 5 minutes
+                onUnlocked = {
+                    navController.navigate(Screen.InRide.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                },
+                onSwitchToNFC = {
+                    navController.navigate(
+                        Screen.SecureNFCUnlock.createRoute(tripId, vehicleId, userId)
+                    )
+                },
+                onCancel = {
+                    navController.popBackStack()
                 }
             )
         }

@@ -25,6 +25,16 @@ sealed class Screen(val route: String) {
     object Booking : Screen("booking")
     object ARWayfinding : Screen("ar_wayfinding")
     object NFCUnlock : Screen("nfc_unlock")
+    object SecureNFCUnlock : Screen("secure_nfc_unlock/{tripId}/{vehicleId}/{userId}") {
+        fun createRoute(tripId: String, vehicleId: String, userId: String): String {
+            return "secure_nfc_unlock/$tripId/$vehicleId/$userId"
+        }
+    }
+    object QRUnlock : Screen("qr_unlock/{tripId}/{vehicleId}/{userId}") {
+        fun createRoute(tripId: String, vehicleId: String, userId: String): String {
+            return "qr_unlock/$tripId/$vehicleId/$userId"
+        }
+    }
     object InRide : Screen("in_ride")
     object RideSummary : Screen("ride_summary")
     object Settings : Screen("settings")
