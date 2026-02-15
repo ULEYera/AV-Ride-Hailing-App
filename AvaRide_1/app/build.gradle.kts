@@ -86,9 +86,8 @@ dependencies {
     // Location Services
     implementation(libs.play.services.location)
 
-    // Google Maps SDK for Compose
-    implementation("com.google.maps.android:maps-compose:4.3.3")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    // OSMDroid
+    implementation(libs.osmdroid.android)
 
     // ARCore
     implementation(libs.arcore)

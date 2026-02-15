@@ -24,8 +24,10 @@ googleServices = "4.4.0"
 firebaseBom = "33.1.0"
 
 room = "2.6.1"
+osmdroid = "6.1.20"
 
 [libraries]
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
