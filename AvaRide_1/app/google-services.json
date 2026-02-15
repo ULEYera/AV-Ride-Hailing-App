@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1011202775742",
+    "project_id": "mobile-b53b4",
+    "storage_bucket": "mobile-b53b4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1011202775742:android:a3a0fb9f095251afef5cef",
+        "android_client_info": {
+          "package_name": "com.example.avaride"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAuaHCgnqH67qoAYxv9ukpm_HfiDENdYUw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
