@@ -3,6 +3,8 @@ package com.example.avaride_1.presentation.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.avaride_1.data.remote.GeminiPredictiveService
+import com.example.avaride_1.data.repository.FirestoreRepository
+import com.example.avaride_1.data.repository.UserPreferencesRepository
 import com.example.avaride_1.domain.model.Destination
 import com.example.avaride_1.domain.model.Location
 import com.example.avaride_1.domain.model.UserContext
@@ -17,21 +19,64 @@ sealed class HomeUiState {
     data class Prediction(
         val destination: Destination,
         val etaMinutes: Int,
-        val estimatedPrice: Double
+        val estimatedPrice: Double,
+        val userInitials: String = "JD" // Default
     ) : HomeUiState()
-    object NoPrediction : HomeUiState() // Show manual input when AI can't predict
+    data class NoPrediction(val userInitials: String = "JD") : HomeUiState() // Show manual input when AI can't predict
     data class Error(val message: String) : HomeUiState()
 }
 
 class HomeViewModel(
-    private val geminiService: GeminiPredictiveService
+    private val geminiService: GeminiPredictiveService,
+    private val firestoreRepository: FirestoreRepository? = null,
+    private val userPrefs: UserPreferencesRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    // Cache initials to persist across state changes
+    private var cachedInitials: String = "JD"
+
     init {
+        loadUserProfile()
         loadPrediction()
+    }
+
+    private fun loadUserProfile() {
+        viewModelScope.launch {
+             userPrefs?.userPhoneNumber?.collect { phoneNumber ->
+                if (!phoneNumber.isNullOrBlank() && firestoreRepository != null) {
+                    try {
+                        val user = firestoreRepository.getUser(phoneNumber)
+                        if (user != null && user.name.isNotBlank()) {
+                             cachedInitials = getInitials(user.name)
+                             // Update current state if it's not loading/error
+                             updateStateWithInitials()
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getInitials(name: String): String {
+        return name.split(" ")
+            .filter { it.isNotEmpty() }
+            .take(2)
+            .mapNotNull { it.firstOrNull()?.uppercase() }
+            .joinToString("")
+    }
+
+    private fun updateStateWithInitials() {
+        val currentState = _uiState.value
+        _uiState.value = when (currentState) {
+            is HomeUiState.Prediction -> currentState.copy(userInitials = cachedInitials)
+            is HomeUiState.NoPrediction -> currentState.copy(userInitials = cachedInitials)
+            else -> currentState
+        }
     }
 
     fun loadPrediction() {
@@ -49,16 +94,17 @@ class HomeViewModel(
                     _uiState.value = HomeUiState.Prediction(
                         destination = predictedDestination,
                         etaMinutes = 4, // Mock data - would calculate from location
-                        estimatedPrice = 12.50 // Mock data - would get from pricing service
+                        estimatedPrice = 12.50, // Mock data - would get from pricing service
+                        userInitials = cachedInitials
                     )
                 } else {
                     // No prediction available - show manual input
-                    _uiState.value = HomeUiState.NoPrediction
+                    _uiState.value = HomeUiState.NoPrediction(userInitials = cachedInitials)
                 }
             } catch (e: Exception) {
                 // On error, also show manual input (graceful fallback)
                 println("HomeViewModel: Prediction error - ${e.message}, showing manual input")
-                _uiState.value = HomeUiState.NoPrediction
+                _uiState.value = HomeUiState.NoPrediction(userInitials = cachedInitials)
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.example.avaride_1.presentation.screens.pickup
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.avaride_1.presentation.components.GlowingMeshGradient
+// import com.example.avaride_1.presentation.components.GlowingMeshGradient // Removed
 import com.example.avaride_1.presentation.screens.search.SearchLocation
 import java.io.Serializable
 
@@ -34,6 +35,12 @@ fun PickupSelectionScreen(
     onPickupSelected: (PickupPoint) -> Unit,
     onBack: () -> Unit
 ) {
+    // Light Theme Colors
+    val PrimaryText = Color(0xFF111827)
+    val SecondaryText = Color(0xFF374151)
+    val BackgroundColor = Color.White
+    val SurfaceColor = Color(0xFFF3F4F6)
+
     // Mock pickup points based on GPS (in production, use actual GPS + nearby points)
     val pickupPoints = remember {
         listOf(
@@ -66,13 +73,14 @@ fun PickupSelectionScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        GlowingMeshGradient()
-
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BackgroundColor)) {
+        
         Column(modifier = Modifier.fillMaxSize()) {
             // Top Bar
             Surface(
-                color = Color.Black.copy(alpha = 0.3f),
+                color = SurfaceColor,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
@@ -86,7 +94,7 @@ fun PickupSelectionScreen(
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White
+                                tint = PrimaryText
                             )
                         }
 
@@ -95,14 +103,14 @@ fun PickupSelectionScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Select Pickup Point",
-                                color = Color.White,
+                                color = PrimaryText,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Going to ${destination.name}",
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = SecondaryText.copy(alpha = 0.8f),
                                 fontSize = 14.sp
                             )
                         }
@@ -114,7 +122,7 @@ fun PickupSelectionScreen(
 
             // Info Card with better messaging
             Surface(
-                color = Color.Black.copy(alpha = 0.2f),
+                color = SurfaceColor,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -131,7 +139,7 @@ fun PickupSelectionScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Looks like you are near these places.\nPick your most preferred pickup point.",
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = SecondaryText,
                         fontSize = 14.sp,
                         lineHeight = 20.sp
                     )
@@ -149,7 +157,10 @@ fun PickupSelectionScreen(
                 items(pickupPoints) { pickup ->
                     PickupPointCard(
                         pickup = pickup,
-                        onClick = { onPickupSelected(pickup) }
+                        onClick = { onPickupSelected(pickup) },
+                        primaryText = PrimaryText,
+                        secondaryText = SecondaryText,
+                        surfaceColor = SurfaceColor
                     )
                 }
             }
@@ -160,14 +171,17 @@ fun PickupSelectionScreen(
 @Composable
 private fun PickupPointCard(
     pickup: PickupPoint,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    primaryText: Color,
+    secondaryText: Color,
+    surfaceColor: Color
 ) {
     Surface(
         onClick = onClick,
         color = if (pickup.isCurrentLocation)
-            Color(0xFF0A84FF).copy(alpha = 0.2f)
+            Color(0xFF0A84FF).copy(alpha = 0.1f)
         else
-            Color.Black.copy(alpha = 0.3f),
+            surfaceColor,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -179,7 +193,7 @@ private fun PickupPointCard(
                 color = if (pickup.isCurrentLocation)
                     Color(0xFF0A84FF).copy(alpha = 0.3f)
                 else
-                    Color.White.copy(alpha = 0.15f),
+                    Color.White,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.size(48.dp)
             ) {
@@ -193,7 +207,7 @@ private fun PickupPointCard(
                         tint = if (pickup.isCurrentLocation)
                             Color(0xFF0A84FF)
                         else
-                            Color.White,
+                            primaryText.copy(alpha = 0.7f),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -205,7 +219,7 @@ private fun PickupPointCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = pickup.name,
-                        color = Color.White,
+                        color = primaryText,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -228,18 +242,19 @@ private fun PickupPointCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = pickup.address,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = secondaryText.copy(alpha = 0.6f),
                     fontSize = 14.sp
                 )
             }
 
             Text(
                 text = pickup.eta,
-                color = Color.White.copy(alpha = 0.5f),
+                color = secondaryText.copy(alpha = 0.5f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
         }
     }
 }
+
 

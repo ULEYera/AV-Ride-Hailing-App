@@ -38,16 +38,22 @@ class SettingsViewModel(
 
     private fun loadUserProfile() {
         viewModelScope.launch {
-            try {
-                val phoneNumber = userPrefs?.userPhoneNumber?.firstOrNull()
+            userPrefs?.userPhoneNumber?.collect { phoneNumber ->
+                println("SettingsViewModel: Phone number from prefs: $phoneNumber")
                 if (!phoneNumber.isNullOrBlank() && firestoreRepository != null) {
-                    val user = firestoreRepository.getUser(phoneNumber)
-                    if (user != null && user.name.isNotBlank()) {
-                         _uiState.update { it.copy(userName = user.name) }
+                    try {
+                        val user = firestoreRepository.getUser(phoneNumber)
+                        println("SettingsViewModel: User from Firestore: $user")
+                        if (user != null && user.name.isNotBlank()) {
+                             _uiState.update { it.copy(userName = user.name) }
+                             println("SettingsViewModel: Updated username to ${user.name}")
+                        } else {
+                            println("SettingsViewModel: User is null or name is blank")
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }

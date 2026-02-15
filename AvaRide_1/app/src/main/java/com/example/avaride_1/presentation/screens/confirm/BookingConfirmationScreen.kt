@@ -3,6 +3,7 @@
 
 package com.example.avaride_1.presentation.screens.confirm
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,7 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.avaride_1.presentation.components.GlowingMeshGradient
+// import com.example.avaride_1.presentation.components.GlowingMeshGradient // Removed for Light Theme
 import com.example.avaride_1.presentation.screens.pickup.PickupPoint
 import com.example.avaride_1.presentation.screens.search.SearchLocation
 
@@ -29,13 +30,21 @@ fun BookingConfirmationScreen(
     onConfirm: () -> Unit,
     onBack: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        GlowingMeshGradient()
+    // Light Theme Colors
+    val PrimaryText = Color(0xFF111827)
+    val SecondaryText = Color(0xFF374151)
+    val BackgroundColor = Color.White
+    val SurfaceColor = Color(0xFFF3F4F6)
 
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BackgroundColor)) {
+        
         Column(modifier = Modifier.fillMaxSize()) {
             // Top Bar
             Surface(
-                color = Color.Black.copy(alpha = 0.3f),
+                color = BackgroundColor,
+                shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -48,7 +57,7 @@ fun BookingConfirmationScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = PrimaryText
                         )
                     }
 
@@ -56,7 +65,7 @@ fun BookingConfirmationScreen(
 
                     Text(
                         text = "Confirm Ride",
-                        color = Color.White,
+                        color = PrimaryText,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -71,9 +80,9 @@ fun BookingConfirmationScreen(
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    // Route Card - BLACK BACKGROUND
+                    // Route Card - LIGHT BACKGROUND
                     Surface(
-                        color = Color.Black.copy(alpha = 0.3f),
+                        color = SurfaceColor,
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -93,27 +102,27 @@ fun BookingConfirmationScreen(
                                 Column {
                                     Text(
                                         text = "PICKUP",
-                                        color = Color.White.copy(alpha = 0.5f),
+                                        color = SecondaryText,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = pickup.name,
-                                        color = Color.White,
+                                        color = PrimaryText,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
                                         text = pickup.address,
-                                        color = Color.White.copy(alpha = 0.6f),
+                                        color = SecondaryText,
                                         fontSize = 14.sp
                                     )
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.2f), modifier = Modifier.padding(start = 56.dp))
+                            HorizontalDivider(color = Color.Black.copy(alpha = 0.1f), modifier = Modifier.padding(start = 56.dp))
                             Spacer(modifier = Modifier.height(16.dp))
 
                             // Destination
@@ -131,20 +140,20 @@ fun BookingConfirmationScreen(
                                 Column {
                                     Text(
                                         text = "DESTINATION",
-                                        color = Color.White.copy(alpha = 0.5f),
+                                        color = SecondaryText,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = destination.name,
-                                        color = Color.White,
+                                        color = PrimaryText,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
                                         text = destination.address,
-                                        color = Color.White.copy(alpha = 0.6f),
+                                        color = SecondaryText,
                                         fontSize = 14.sp
                                     )
                                 }
@@ -154,9 +163,9 @@ fun BookingConfirmationScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Map showing route - BLACK BACKGROUND
+                    // Map showing route - LIGHT BACKGROUND
                     Surface(
-                        color = Color.Black.copy(alpha = 0.3f),
+                        color = SurfaceColor,
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -173,31 +182,31 @@ fun BookingConfirmationScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Trip Details - BLACK BACKGROUND
+                    // Trip Details - LIGHT BACKGROUND
                     Surface(
-                        color = Color.Black.copy(alpha = 0.3f),
+                        color = SurfaceColor,
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
                                 text = "Trip Details",
-                                color = Color.White,
+                                color = PrimaryText,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            DetailRow("Vehicle Type", "Standard AV", "🚗")
+                            DetailRow("Vehicle Type", "Standard AV", "🚗", PrimaryText, SecondaryText)
                             Spacer(modifier = Modifier.height(12.dp))
-                            DetailRow("Estimated Time", "18 mins", "⏱️")
+                            DetailRow("Estimated Time", "18 mins", "⏱️", PrimaryText, SecondaryText)
                             Spacer(modifier = Modifier.height(12.dp))
-                            DetailRow("Distance", destination.distance, "📏")
+                            DetailRow("Distance", destination.distance, "📏", PrimaryText, SecondaryText)
                             Spacer(modifier = Modifier.height(12.dp))
-                            DetailRow("Payment", "Google Pay", "💳")
+                            DetailRow("Payment", "Google Pay", "💳", PrimaryText, SecondaryText)
 
                             Spacer(modifier = Modifier.height(16.dp))
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                            HorizontalDivider(color = Color.Black.copy(alpha = 0.1f))
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Row(
@@ -207,13 +216,13 @@ fun BookingConfirmationScreen(
                             ) {
                                 Text(
                                     text = "Total Fare",
-                                    color = Color.White,
+                                    color = PrimaryText,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
                                     text = "$12.50",
-                                    color = Color(0xFF30D158),
+                                    color = Color(0xFF30D158), // Keeping Green for money
                                     fontSize = 28.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -224,14 +233,14 @@ fun BookingConfirmationScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Confirm Button - BLACK BACKGROUND
+                // Confirm Button
                 Button(
                     onClick = onConfirm,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Black.copy(alpha = 0.4f),
+                        containerColor = PrimaryText, // Black/Dark Grey button for high contrast
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(16.dp)
@@ -248,7 +257,7 @@ fun BookingConfirmationScreen(
 }
 
 @Composable
-private fun DetailRow(label: String, value: String, icon: String) {
+private fun DetailRow(label: String, value: String, icon: String, primaryColor: Color, secondaryColor: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -259,13 +268,13 @@ private fun DetailRow(label: String, value: String, icon: String) {
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = label,
-                color = Color.White.copy(alpha = 0.7f),
+                color = secondaryColor,
                 fontSize = 15.sp
             )
         }
         Text(
             text = value,
-            color = Color.White,
+            color = primaryColor,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium
         )

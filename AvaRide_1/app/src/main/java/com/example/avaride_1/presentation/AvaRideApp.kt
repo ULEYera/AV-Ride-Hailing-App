@@ -2,10 +2,13 @@ package com.example.avaride_1.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,7 +44,8 @@ fun AvaRideApp() {
 
     // Initialize services
     // Services & Repositories
-    val context = androidx.compose.ui.platform.LocalContext.current
+    // Services & Repositories
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val geminiService = remember { GeminiPredictiveService(BuildConfig.GEMINI_API_KEY) }
     
     // Database & Refs
@@ -55,10 +59,24 @@ fun AvaRideApp() {
     // Check session on launch
     LaunchedEffect(Unit) {
         userPrefs.userPhoneNumber.collect { phone ->
-            if (!phone.isNullOrBlank()) {
-                startDest = Screen.Home.route
+            println("SESSION_DEBUG: Phone state changed: $phone")
+            if (isCheckingSession) {
+                if (!phone.isNullOrBlank()) {
+                    println("SESSION_DEBUG: Found existing session, starting at Home")
+                    startDest = Screen.Home.route
+                } else {
+                    println("SESSION_DEBUG: No session found, starting at Login")
+                }
+                isCheckingSession = false
+            } else {
+                // Runtime check (e.g. after logout)
+                if (phone.isNullOrBlank()) {
+                    println("SESSION_DEBUG: Session cleared, navigating to Login")
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             }
-            isCheckingSession = false
         }
     }
 
@@ -72,7 +90,7 @@ fun AvaRideApp() {
 
     // ViewModels
     val loginViewModel = remember { com.example.avaride_1.presentation.screens.login.LoginViewModel(firestoreRepository, userPrefs) }
-    val homeViewModel = remember { HomeViewModel(geminiService) }
+    val homeViewModel = remember { HomeViewModel(geminiService, firestoreRepository, userPrefs) }
     val bookingViewModel = remember { BookingViewModel() }
     val inRideViewModel = remember { InRideViewModel(firestoreRepository, userPrefs) }
     val settingsViewModel = remember { SettingsViewModel(firestoreRepository, userPrefs) }
@@ -105,27 +123,64 @@ fun AvaRideApp() {
         }
 
         composable(Screen.Home.route) {
+            val isRideActive by bookingViewModel.isRideActive.collectAsState()
+            
+            // Simple alert state (should ideally use a Dialog composable)
+            var showActiveRideAlert by remember { mutableStateOf(false) }
+
+            if (showActiveRideAlert) {
+                AlertDialog(
+                    onDismissRequest = { showActiveRideAlert = false },
+                    title = { Text("Ride in Progress") },
+                    text = { Text("You already have an active ride. Please complete it before booking another.") },
+                    confirmButton = {
+                        TextButton(onClick = { 
+                            showActiveRideAlert = false
+                            navController.navigate(Screen.BookingStatus.route)
+                        }) {
+                            Text("View Ride")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showActiveRideAlert = false }) {
+                            Text("Close")
+                        }
+                    }
+                )
+            }
+
             HomeScreen(
                 viewModel = homeViewModel,
                 onBookRide = {
-                    navController.navigate(Screen.Booking.route)
+                    if (isRideActive) {
+                        showActiveRideAlert = true
+                    } else {
+                        navController.navigate(Screen.Booking.route)
+                    }
                 },
                 onSearchTapped = {
-                    // Navigate to destination search
-                    navController.navigate(Screen.DestinationSearch.route)
+                    if (isRideActive) {
+                        showActiveRideAlert = true
+                    } else {
+                        navController.navigate(Screen.DestinationSearch.route)
+                    }
                 },
                 onQuickDestinationSelected = { name, address, distance ->
-                    // Create destination from quick access button
-                    val quickDestination = com.example.avaride_1.presentation.screens.search.SearchLocation(
-                        name = name,
-                        address = address,
-                        distance = distance,
-                        latitude = 1.4010,
-                        longitude = 103.9070
-                    )
-                    // Save to ViewModel instead of savedStateHandle
-                    bookingViewModel.setDestination(quickDestination)
-                    navController.navigate(Screen.PickupSelection.route)
+                    if (isRideActive) {
+                        showActiveRideAlert = true
+                    } else {
+                        // Create destination from quick access button
+                        val quickDestination = com.example.avaride_1.presentation.screens.search.SearchLocation(
+                            name = name,
+                            address = address,
+                            distance = distance,
+                            latitude = 1.4010,
+                            longitude = 103.9070
+                        )
+                        // Save to ViewModel instead of savedStateHandle
+                        bookingViewModel.setDestination(quickDestination)
+                        navController.navigate(Screen.PickupSelection.route)
+                    }
                 },
                 onProfileTapped = {
                     showSettings = true
@@ -254,6 +309,7 @@ fun AvaRideApp() {
              com.example.avaride_1.presentation.screens.payment.PaymentScreen(
                  totalFare = 12.50, // Hardcoded for MVP
                  onPaymentSuccess = {
+                     bookingViewModel.setRideActive(true)
                      navController.navigate(Screen.BookingStatus.route)
                  },
                  onBack = {
@@ -264,16 +320,24 @@ fun AvaRideApp() {
 
         composable(Screen.BookingStatus.route) {
             val destination by bookingViewModel.destination.collectAsState()
+            val arrivalTime by bookingViewModel.arrivalTime.collectAsState()
             
             if (destination != null) {
                 com.example.avaride_1.presentation.screens.confirm.BookingStatusScreen(
                     destination = destination!!,
+                    arrivalTime = arrivalTime,
                     onUnlock = {
                         // Clear booking data only after successful unlock/boarding logic starts
                          bookingViewModel.clearBookingData()
                          navController.navigate(Screen.NFCUnlock.route) {
                              popUpTo(Screen.Home.route) { inclusive = false }
                          }
+                    },
+                    onBack = {
+                        // Go back to Home explicitly as per request
+                        navController.navigate(Screen.Home.route) {
+                             popUpTo(Screen.Home.route) { inclusive = true }
+                        }
                     }
                 )
             } else {
@@ -349,10 +413,97 @@ fun AvaRideApp() {
     if (showSettings) {
         SettingsSheet(
             onDismiss = { showSettings = false },
-            viewModel = settingsViewModel
+            viewModel = settingsViewModel,
+            isRideActive = bookingViewModel.isRideActive.collectAsState().value
         )
     }
+
+    // Floating Ride Widget (Only show if active ride & not on ride screens)
+    val isRideActive by bookingViewModel.isRideActive.collectAsState()
+    val navBackStackEntry by navController.currentBackStackEntryFlow.collectAsState(initial = null)
+    val currentRoute = navBackStackEntry?.destination?.route
+    val arrivalTime by bookingViewModel.arrivalTime.collectAsState()
+
+    if (isRideActive && 
+        currentRoute != Screen.BookingStatus.route && 
+        currentRoute != Screen.NFCUnlock.route && 
+        currentRoute != Screen.InRide.route) {
+        
+        // Calculate remaining seconds for widget
+        var remainingSeconds by remember { mutableStateOf(0L) }
+        
+        LaunchedEffect(arrivalTime) {
+            if (arrivalTime != null) {
+                while (true) {
+                    val remaining = (arrivalTime!! - System.currentTimeMillis()) / 1000
+                    remainingSeconds = if (remaining > 0) remaining else 0
+                    delay(1000)
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 100.dp), // Check formatting
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            FloatingRidePill(
+                remainingSeconds = remainingSeconds,
+                onClick = { navController.navigate(Screen.BookingStatus.route) }
+            )
+        }
+    }
 }
+
+@Composable
+fun FloatingRidePill(
+    remainingSeconds: Long,
+    onClick: () -> Unit
+) {
+    val mins = remainingSeconds / 60
+    val secs = remainingSeconds % 60
+    val timeText = if (remainingSeconds > 0) "Arriving in ${String.format("%d:%02d", mins, secs)}" else "Arrived!"
+    val color = if (remainingSeconds > 0) Color.White else Color(0xFF30D158)
+
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        color = Color(0xFF1C1C1E),
+        shape = androidx.compose.foundation.shape.CircleShape,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF333333)),
+        modifier = Modifier
+            .height(56.dp)
+            .widthIn(min = 200.dp)
+            .padding(horizontal = 16.dp),
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+             Text(
+                text = "🚗",
+                fontSize = 20.sp
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = timeText,
+                    color = color,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Tap to view",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
 
 // Placeholder screens (to be fully implemented)
 @Composable

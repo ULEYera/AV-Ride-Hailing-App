@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.avaride_1.presentation.components.GlowingMeshGradient
+// import com.example.avaride_1.presentation.components.GlowingMeshGradient // Removed for Light Theme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,13 +31,21 @@ fun PaymentScreen(
     var selectedMethod by remember { mutableStateOf("Google Pay") }
     var isProcessing by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        GlowingMeshGradient()
+    // Light Theme Colors
+    val PrimaryText = Color(0xFF111827)
+    val SecondaryText = Color(0xFF374151)
+    val BackgroundColor = Color.White
+    val SurfaceColor = Color(0xFFF3F4F6)
 
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BackgroundColor)) {
+        
         Column(modifier = Modifier.fillMaxSize()) {
             // Top Bar
             Surface(
-                color = Color.Black.copy(alpha = 0.3f),
+                color = BackgroundColor,
+                shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -50,13 +58,13 @@ fun PaymentScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = PrimaryText
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Payment",
-                        color = Color.White,
+                        color = PrimaryText,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -72,13 +80,13 @@ fun PaymentScreen(
                 // Total Amount
                 Text(
                     text = "Total Amount",
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = SecondaryText,
                     fontSize = 16.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "$${String.format("%.2f", totalFare)}",
-                    color = Color.White,
+                    color = PrimaryText,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -88,7 +96,7 @@ fun PaymentScreen(
                 // Payment Methods
                 Text(
                     text = "Payment Method",
-                    color = Color.White,
+                    color = PrimaryText,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.align(Alignment.Start)
@@ -99,14 +107,18 @@ fun PaymentScreen(
                     name = "Google Pay",
                     icon = Icons.Default.AccountBox, // Placeholder icon
                     isSelected = selectedMethod == "Google Pay",
-                    onClick = { selectedMethod = "Google Pay" }
+                    onClick = { selectedMethod = "Google Pay" },
+                    primaryText = PrimaryText,
+                    surfaceColor = SurfaceColor
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 PaymentMethodItem(
                     name = "Credit Card •••• 4242",
                     icon = Icons.Default.AccountBox,
                     isSelected = selectedMethod == "Credit Card",
-                    onClick = { selectedMethod = "Credit Card" }
+                    onClick = { selectedMethod = "Credit Card" },
+                    primaryText = PrimaryText,
+                    surfaceColor = SurfaceColor
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -157,10 +169,12 @@ fun PaymentMethodItem(
     name: String,
     icon: ImageVector,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    primaryText: Color,
+    surfaceColor: Color
 ) {
     Surface(
-        color = if (isSelected) Color(0xFF0A84FF).copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
+        color = if (isSelected) Color(0xFF0A84FF).copy(alpha = 0.1f) else surfaceColor,
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -178,13 +192,13 @@ fun PaymentMethodItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) Color(0xFF0A84FF) else Color.White,
+                tint = if (isSelected) Color(0xFF0A84FF) else primaryText.copy(alpha = 0.7f),
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = name,
-                color = Color.White,
+                color = if (isSelected) Color(0xFF0A84FF) else primaryText,
                 fontSize = 16.sp,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 modifier = Modifier.weight(1f)

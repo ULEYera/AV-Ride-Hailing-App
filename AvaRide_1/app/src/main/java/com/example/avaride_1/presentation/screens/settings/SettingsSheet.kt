@@ -21,10 +21,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+// Color Palette
+private val LightBackground = Color.White
+private val LightSurface = Color(0xFFF5F5F7)
+private val PrimaryText = Color(0xFF111827) // Dark Grey
+private val SecondaryText = Color(0xFF222222) // Slightly Lighter Dark Grey
+private val AccentBlue = Color(0xFF0A84FF)
+private val AccentGreen = Color(0xFF30D158)
+private val DestructiveRed = Color(0xFFFF3B30)
+
 @Composable
 fun SettingsSheet(
     onDismiss: () -> Unit,
-    viewModel: SettingsViewModel
+    viewModel: SettingsViewModel,
+    isRideActive: Boolean = false
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -50,7 +60,7 @@ fun SettingsSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                    .background(Color(0xFF1C1C1E))
+                    .background(LightBackground)
                     .padding(24.dp)
             ) {
                 Row(
@@ -61,23 +71,30 @@ fun SettingsSheet(
                     Column {
                         Text(
                             text = "Settings",
-                            color = Color.White,
+                            color = PrimaryText,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = uiState.userName,
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 16.sp
+                            color = SecondaryText.copy(alpha = 0.6f),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
 
-                    IconButton(onClick = onDismiss) {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .background(LightSurface, androidx.compose.foundation.shape.CircleShape)
+                            .size(36.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = Color.White
+                            tint = PrimaryText,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -148,12 +165,26 @@ fun SettingsSheet(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
-                    onClick = { viewModel.logout() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30)), // Red
+                    onClick = {
+                        if (!isRideActive) {
+                            viewModel.logout()
+                            onDismiss()
+                        }
+                    },
+                    enabled = !isRideActive,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isRideActive) Color.Gray else DestructiveRed,
+                        disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
+                    ),
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Log Out", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (isRideActive) "Cannot Log Out During Ride" else "Log Out",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -179,7 +210,7 @@ private fun ControlCenterToggle(
 ) {
     Surface(
         onClick = onClick,
-        color = if (isActive) Color(0xFF0A84FF).copy(alpha = 0.3f) else Color(0xFF2C2C2E),
+        color = if (isActive) AccentBlue.copy(alpha = 0.1f) else LightSurface,
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -192,20 +223,20 @@ private fun ControlCenterToggle(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = if (isActive) Color(0xFF0A84FF) else Color.White.copy(alpha = 0.6f),
+                tint = if (isActive) AccentBlue else PrimaryText.copy(alpha = 0.8f),
                 modifier = Modifier.size(28.dp)
             )
 
             Column {
                 Text(
                     text = title,
-                    color = Color.White,
+                    color = PrimaryText,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = subtitle,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = SecondaryText.copy(alpha = 0.6f),
                     fontSize = 13.sp
                 )
             }
@@ -222,7 +253,7 @@ private fun ControlCenterCard(
 ) {
     Surface(
         onClick = onClick,
-        color = Color(0xFF2C2C2E),
+        color = LightSurface,
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -235,20 +266,20 @@ private fun ControlCenterCard(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = Color.White.copy(alpha = 0.6f),
+                tint = PrimaryText.copy(alpha = 0.8f),
                 modifier = Modifier.size(28.dp)
             )
 
             Column {
                 Text(
                     text = title,
-                    color = Color.White,
+                    color = PrimaryText,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = subtitle,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = SecondaryText.copy(alpha = 0.6f),
                     fontSize = 13.sp
                 )
             }
@@ -262,14 +293,14 @@ private fun QuickSettingsList(
     onPreferenceChange: (String, Boolean) -> Unit
 ) {
     Surface(
-        color = Color(0xFF2C2C2E),
+        color = LightSurface,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Quick Settings",
-                color = Color.White.copy(alpha = 0.6f),
+                color = SecondaryText.copy(alpha = 0.6f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -288,8 +319,9 @@ private fun QuickSettingsList(
                         text = key.replace("_", " ").replaceFirstChar {
                             if (it.isLowerCase()) it.titlecase() else it.toString()
                         },
-                        color = Color.White,
-                        fontSize = 16.sp
+                        color = PrimaryText,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
                     )
 
                     Switch(
@@ -297,9 +329,9 @@ private fun QuickSettingsList(
                         onCheckedChange = { onPreferenceChange(key, it) },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF30D158),
+                            checkedTrackColor = AccentGreen,
                             uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = Color(0xFF39393D)
+                            uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
                         )
                     )
                 }

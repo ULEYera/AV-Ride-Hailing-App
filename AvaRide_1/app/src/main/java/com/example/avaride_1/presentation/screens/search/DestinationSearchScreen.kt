@@ -1,5 +1,6 @@
 package com.example.avaride_1.presentation.screens.search
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.avaride_1.presentation.components.GlowingMeshGradient
+// import com.example.avaride_1.presentation.components.GlowingMeshGradient // Removed for Light Theme
 
 import java.io.Serializable
 
@@ -42,6 +43,12 @@ fun DestinationSearchScreen(
     var searchQuery by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<SearchLocation>>(emptyList()) }
     var selectedLocation by remember { mutableStateOf<SearchLocation?>(null) }
+
+    // Light Theme Colors
+    val PrimaryText = Color(0xFF111827)
+    val SecondaryText = Color(0xFF374151)
+    val BackgroundColor = Color.White
+    val SurfaceColor = Color(0xFFF3F4F6)
 
     // Mock Singapore locations (in production, use Google Places API)
     val singaporeLocations = remember {
@@ -73,13 +80,15 @@ fun DestinationSearchScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        GlowingMeshGradient()
-
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BackgroundColor)) {
+        
         Column(modifier = Modifier.fillMaxSize()) {
             // Top App Bar
             Surface(
-                color = Color.Black.copy(alpha = 0.3f),
+                color = BackgroundColor,
+                shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -92,7 +101,7 @@ fun DestinationSearchScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = PrimaryText
                         )
                     }
 
@@ -104,13 +113,13 @@ fun DestinationSearchScreen(
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.weight(1f),
                         placeholder = {
-                            Text("Where to?", color = Color.White.copy(alpha = 0.5f))
+                            Text("Where to?", color = SecondaryText.copy(alpha = 0.5f))
                         },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Search",
-                                tint = Color.White.copy(alpha = 0.7f)
+                                tint = PrimaryText.copy(alpha = 0.7f)
                             )
                         },
                         trailingIcon = {
@@ -119,17 +128,17 @@ fun DestinationSearchScreen(
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "Clear",
-                                        tint = Color.White.copy(alpha = 0.7f)
+                                        tint = PrimaryText.copy(alpha = 0.7f)
                                     )
                                 }
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = Color.White.copy(alpha = 0.5f),
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                            cursorColor = Color.White
+                            focusedTextColor = PrimaryText,
+                            unfocusedTextColor = PrimaryText,
+                            focusedBorderColor = Color(0xFF0A84FF),
+                            unfocusedBorderColor = SecondaryText.copy(alpha = 0.3f),
+                            cursorColor = Color(0xFF0A84FF)
                         ),
                         shape = RoundedCornerShape(12.dp),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -151,7 +160,7 @@ fun DestinationSearchScreen(
                     item {
                         Text(
                             text = "Popular destinations",
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = SecondaryText,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -166,7 +175,10 @@ fun DestinationSearchScreen(
                         onCardClick = {
                             selectedLocation = if (selectedLocation == location) null else location
                         },
-                        onConfirmClick = { onDestinationSelected(location) }
+                        onConfirmClick = { onDestinationSelected(location) },
+                        primaryText = PrimaryText,
+                        secondaryText = SecondaryText,
+                        surfaceColor = SurfaceColor
                     )
                 }
 
@@ -180,14 +192,14 @@ fun DestinationSearchScreen(
                         ) {
                             Text(
                                 text = "No results found",
-                                color = Color.White,
+                                color = PrimaryText,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Medium
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Try searching for a different location",
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = SecondaryText,
                                 fontSize = 14.sp
                             )
                         }
@@ -203,11 +215,14 @@ private fun LocationResultCard(
     location: SearchLocation,
     isSelected: Boolean,
     onCardClick: () -> Unit,
-    onConfirmClick: () -> Unit
+    onConfirmClick: () -> Unit,
+    primaryText: Color,
+    secondaryText: Color,
+    surfaceColor: Color
 ) {
     Surface(
         onClick = onCardClick,
-        color = Color.Black.copy(alpha = if (isSelected) 0.4f else 0.3f),
+        color = if (isSelected) Color(0xFF0A84FF).copy(alpha = 0.1f) else surfaceColor,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -217,7 +232,7 @@ private fun LocationResultCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = Color.White.copy(alpha = 0.15f),
+                    color = if (isSelected) Color(0xFF0A84FF) else primaryText.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.size(48.dp)
                 ) {
@@ -225,7 +240,7 @@ private fun LocationResultCard(
                         Icon(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = if (isSelected) Color.White else primaryText,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -236,21 +251,21 @@ private fun LocationResultCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = location.name,
-                        color = Color.White,
+                        color = primaryText,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = location.address,
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = secondaryText,
                         fontSize = 14.sp
                     )
                 }
 
                 Text(
                     text = location.distance,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = secondaryText.copy(alpha = 0.7f),
                     fontSize = 13.sp
                 )
             }
@@ -275,7 +290,7 @@ private fun LocationResultCard(
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0A84FF),
+                        containerColor = primaryText,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(12.dp)

@@ -19,6 +19,12 @@ class BookingViewModel : ViewModel() {
     private val _pickup = MutableStateFlow<PickupPoint?>(null)
     val pickup: StateFlow<PickupPoint?> = _pickup.asStateFlow()
 
+    private val _isRideActive = MutableStateFlow(false)
+    val isRideActive: StateFlow<Boolean> = _isRideActive.asStateFlow()
+
+    private val _arrivalTime = MutableStateFlow<Long?>(null)
+    val arrivalTime: StateFlow<Long?> = _arrivalTime.asStateFlow()
+
     fun setDestination(destination: SearchLocation) {
         println("BookingViewModel: Setting destination - ${destination.name}")
         _destination.value = destination
@@ -29,14 +35,32 @@ class BookingViewModel : ViewModel() {
         _pickup.value = pickup
     }
 
+    fun setRideActive(isActive: Boolean) {
+        _isRideActive.value = isActive
+        if (isActive && _arrivalTime.value == null) {
+            // Start timer if not already set (2 minutes default)
+            _arrivalTime.value = System.currentTimeMillis() + 2 * 60 * 1000
+        } else if (!isActive) {
+            _arrivalTime.value = null
+        }
+    }
+
     fun clearBookingData() {
         println("BookingViewModel: Clearing booking data")
         _destination.value = null
         _pickup.value = null
+        _isRideActive.value = false
+        _arrivalTime.value = null
     }
 
     fun hasCompleteBookingData(): Boolean {
         return _destination.value != null && _pickup.value != null
+    }
+
+    fun getRemainingSeconds(): Long {
+        val target = _arrivalTime.value ?: return 0
+        val remaining = (target - System.currentTimeMillis()) / 1000
+        return if (remaining > 0) remaining else 0
     }
 }
 

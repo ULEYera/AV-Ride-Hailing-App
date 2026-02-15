@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.avaride_1.presentation.components.GlowingMeshGradient
+// import com.example.avaride_1.presentation.components.GlowingMeshGradient // Removed for Light Theme
 
 @Composable
 fun LoginScreen(
@@ -21,6 +21,12 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Light Theme Colors
+    val PrimaryText = Color(0xFF111827)
+    val SecondaryText = Color(0xFF374151)
+    val BackgroundColor = Color.White
+    // val SurfaceColor = Color(0xFFF3F4F6) // Not strictly needed if we remove the card
 
     // Effect to navigate on success
     LaunchedEffect(uiState.isLoggedIn) {
@@ -30,46 +36,44 @@ fun LoginScreen(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundColor),
         contentAlignment = Alignment.Center
     ) {
-        // Background
-        GlowingMeshGradient()
-
+        
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(32.dp)
-                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
-                .padding(24.dp),
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "AvaRide",
-                color = Color.White,
+                color = PrimaryText,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Autonomous Sign-In",
-                color = Color.White.copy(alpha = 0.7f),
+                color = SecondaryText.copy(alpha = 0.7f),
                 fontSize = 16.sp
             )
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
             if (uiState.isNewUser) {
                 // Name Input Step
                 Text(
                     text = "Welcome to AvaRide!",
-                    color = Color.White,
+                    color = PrimaryText,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "What should we call you?",
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = SecondaryText.copy(alpha = 0.7f),
                     fontSize = 16.sp
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -77,16 +81,16 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = uiState.name,
                     onValueChange = { viewModel.onNameChange(it) },
-                    label = { Text("Your Name") },
-                    placeholder = { Text("e.g. John Doe") },
+                    label = { Text("Your Name", color = SecondaryText) },
+                    placeholder = { Text("e.g. John Doe", color = SecondaryText.copy(alpha = 0.4f)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
                         focusedBorderColor = Color(0xFF0A84FF),
-                        unfocusedBorderColor = Color.White.copy(alpha=0.3f),
+                        unfocusedBorderColor = SecondaryText.copy(alpha=0.3f),
                         cursorColor = Color(0xFF0A84FF)
                     )
                 )
@@ -96,8 +100,12 @@ fun LoginScreen(
                 Button(
                     onClick = { viewModel.completeRegistration() },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)),
-                    enabled = !uiState.isLoading
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryText, // Dark button for contrast
+                        contentColor = Color.White
+                    ),
+                    enabled = !uiState.isLoading,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                      if (uiState.isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -111,16 +119,16 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = uiState.phoneNumber,
                     onValueChange = { viewModel.onPhoneNumberChange(it) },
-                    label = { Text("Phone Number") },
-                    placeholder = { Text("e.g. 8888 8888") },
+                    label = { Text("Phone Number", color = SecondaryText) },
+                    placeholder = { Text("e.g. 8888 8888", color = SecondaryText.copy(alpha = 0.4f)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
                         focusedBorderColor = Color(0xFF0A84FF),
-                        unfocusedBorderColor = Color.White.copy(alpha=0.3f),
+                        unfocusedBorderColor = SecondaryText.copy(alpha=0.3f),
                         cursorColor = Color(0xFF0A84FF)
                     )
                 )
@@ -128,8 +136,12 @@ fun LoginScreen(
                 Button(
                     onClick = { viewModel.sendOtp() },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A84FF)),
-                    enabled = !uiState.isLoading
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryText, // Dark button for contrast
+                        contentColor = Color.White
+                    ),
+                    enabled = !uiState.isLoading,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -141,23 +153,23 @@ fun LoginScreen(
                 // OTP Step
                 Text(
                     text = "Enter code sent to ${uiState.phoneNumber}",
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = SecondaryText.copy(alpha = 0.8f),
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = uiState.otpCode,
                     onValueChange = { viewModel.onOtpCodeChange(it) },
-                    label = { Text("4-Digit Code") },
-                    placeholder = { Text("Any code works for demo") },
+                    label = { Text("4-Digit Code", color = SecondaryText) },
+                    placeholder = { Text("Any code works for demo", color = SecondaryText.copy(alpha = 0.4f)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
                         focusedBorderColor = Color(0xFF0A84FF),
-                        unfocusedBorderColor = Color.White.copy(alpha=0.3f),
+                        unfocusedBorderColor = SecondaryText.copy(alpha=0.3f),
                         cursorColor = Color(0xFF0A84FF)
                     )
                 )
@@ -165,8 +177,12 @@ fun LoginScreen(
                 Button(
                     onClick = { viewModel.verifyOtp() },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF30D158)),
-                    enabled = !uiState.isLoading
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF30D158), // Green for success/verify
+                        contentColor = Color.White
+                    ),
+                    enabled = !uiState.isLoading,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))

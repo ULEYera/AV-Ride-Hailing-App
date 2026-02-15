@@ -20,7 +20,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.avaride_1.presentation.components.GlowingMeshGradient
+// import com.example.avaride_1.presentation.components.GlowingMeshGradient // Removed for Light Theme
 import com.example.avaride_1.presentation.screens.search.SearchLocation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -34,23 +34,41 @@ data class ChatMessage(
 @Composable
 fun BookingStatusScreen(
     destination: SearchLocation,
-    onUnlock: () -> Unit
+    arrivalTime: Long?,
+    onUnlock: () -> Unit,
+    onBack: () -> Unit
 ) {
-    var isFinding by remember { mutableStateOf(true) }
-    var avId by remember { mutableStateOf("") }
-    var etaMinutes by remember { mutableStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        // Simulate "Finding AV" State
-        delay(2000) 
-        avId = "AV-SG-${(1000..9999).random()}"
-        etaMinutes = 2 // Hardcode 2 minutes as requested
-        isFinding = false
+    // If arrivalTime is set, we skip the finding phase
+    var isFinding by remember { mutableStateOf(arrivalTime == null) }
+    var avId by remember { mutableStateOf("AV-SG-4042") } // Mock ID
+    /* 
+       We calculate etaMinutes dynamically based on arrivalTime.
+       If arrivalTime is null (finding), we default to 2.
+    */
+    
+    // Handle Back Press
+    androidx.activity.compose.BackHandler {
+        onBack()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        GlowingMeshGradient()
+    LaunchedEffect(Unit) {
+        if (isFinding) {
+            // Simulate "Finding AV" only if not already found
+            delay(2000) 
+            isFinding = false
+        }
+    }
 
+    // Light Theme Colors
+    val PrimaryText = Color(0xFF111827)
+    val SecondaryText = Color(0xFF374151)
+    val BackgroundColor = Color.White
+    val SurfaceColor = Color(0xFFF3F4F6)
+
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BackgroundColor)) {
+        
         if (isFinding) {
             Column(
                 modifier = Modifier
@@ -67,24 +85,44 @@ fun BookingStatusScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = "Finding your AV...",
-                    color = Color.White,
+                    color = PrimaryText,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Authorized payment. Searching for nearest vehicle...",
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = SecondaryText,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center
                 )
             }
         } else {
+            // Calculate remaining time
+            var timeRemainingSeconds by remember { mutableStateOf(0L) }
+            
+            LaunchedEffect(arrivalTime) {
+                if (arrivalTime != null) {
+                    while (true) {
+                        val remaining = (arrivalTime - System.currentTimeMillis()) / 1000
+                        timeRemainingSeconds = if (remaining > 0) remaining else 0
+                        if (timeRemainingSeconds <= 0) break
+                        delay(1000)
+                    }
+                } else {
+                    // Fallback simulation if no arrivalTime passed (shouldn't happen with ViewModel)
+                    timeRemainingSeconds = 120
+                }
+            }
+
             AVFoundContent(
                 avId = avId,
-                etaMinutes = etaMinutes,
+                timeRemainingSeconds = timeRemainingSeconds,
                 destination = destination,
-                onUnlock = onUnlock
+                onUnlock = onUnlock,
+                primaryText = PrimaryText,
+                secondaryText = SecondaryText,
+                surfaceColor = SurfaceColor
             )
         }
     }
@@ -93,7 +131,9 @@ fun BookingStatusScreen(
 @Composable
 fun ChatBubble(message: ChatMessage) {
     val alignment = if (message.isUser) Alignment.End else Alignment.Start
-    val color = if (message.isUser) Color(0xFF0A84FF) else Color(0xFF333333)
+    // User: Blue bg, White text. AI: Light Gray bg, Dark text.
+    val bubbleColor = if (message.isUser) Color(0xFF0A84FF) else Color(0xFFF3F4F6)
+    val textColor = if (message.isUser) Color.White else Color(0xFF111827)
     val cornerRadius = 16.dp
 
     Column(
@@ -101,7 +141,7 @@ fun ChatBubble(message: ChatMessage) {
         horizontalAlignment = alignment
     ) {
         Surface(
-            color = color,
+            color = bubbleColor,
             shape = RoundedCornerShape(
                 topStart = cornerRadius,
                 topEnd = cornerRadius,
@@ -114,7 +154,7 @@ fun ChatBubble(message: ChatMessage) {
         ) {
             Text(
                 text = message.text,
-                color = Color.White,
+                color = textColor,
                 modifier = Modifier.padding(12.dp),
                 fontSize = 15.sp
             )
@@ -137,9 +177,12 @@ fun getMockAIResponse(query: String): String {
 @Composable
 private fun AVFoundContent(
     avId: String,
-    etaMinutes: Int,
+    timeRemainingSeconds: Long,
     destination: SearchLocation,
-    onUnlock: () -> Unit
+    onUnlock: () -> Unit,
+    primaryText: Color,
+    secondaryText: Color,
+    surfaceColor: Color
 ) {
     var chatMessages by remember { mutableStateOf(listOf(
         ChatMessage("👋 Hi! I'm Ava, your AV assistant. I'm on my way!", false)
@@ -147,23 +190,15 @@ private fun AVFoundContent(
     var inputText by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     
-    // Timer state
-    var timeRemainingSeconds by remember { mutableStateOf(120) } // 2 minutes
     val isArrived = timeRemainingSeconds <= 0
-
-    // Countdown effect
-    LaunchedEffect(Unit) {
-        while (timeRemainingSeconds > 0) {
-            delay(1000)
-            timeRemainingSeconds--
-            
-            // Optional: AI updates when close
-            if (timeRemainingSeconds == 60) {
-                chatMessages = chatMessages + ChatMessage("I'm just 1 minute away now!", false)
-            }
-            if (timeRemainingSeconds == 0) {
-                 chatMessages = chatMessages + ChatMessage("I've arrived! Please unlock the vehicle.", false)
-            }
+ 
+    // Trigger AI message when close (handled in effect or just check time)
+    LaunchedEffect(timeRemainingSeconds) {
+        if (timeRemainingSeconds == 60L) {
+             chatMessages = chatMessages + ChatMessage("I'm just 1 minute away now!", false)
+        }
+        if (timeRemainingSeconds == 0L) {
+             chatMessages = chatMessages + ChatMessage("I've arrived! Please unlock the vehicle.", false)
         }
     }
 
@@ -178,7 +213,7 @@ private fun AVFoundContent(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = if (isArrived) "AV Arrived!" else "AV on the way",
-                color = Color.White,
+                color = primaryText,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -197,7 +232,7 @@ private fun AVFoundContent(
 
             // AV Details Card
             Surface(
-                color = Color.Black.copy(alpha = 0.3f),
+                color = surfaceColor,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -218,20 +253,20 @@ private fun AVFoundContent(
                     Column {
                         Text(
                             text = avId,
-                            color = Color.White,
+                            color = primaryText,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Standard AV • 4 Seats",
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = secondaryText,
                             fontSize = 14.sp
                         )
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
                         text = "$12.50",
-                        color = Color.White,
+                        color = primaryText,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -240,7 +275,7 @@ private fun AVFoundContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+        HorizontalDivider(color = Color.Black.copy(alpha = 0.1f))
         Spacer(modifier = Modifier.height(8.dp))
 
         // --- MIDDLE: Chat Interface ---
@@ -266,14 +301,14 @@ private fun AVFoundContent(
             TextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                placeholder = { Text("Ask something...", color = Color.White.copy(alpha = 0.5f)) },
+                placeholder = { Text("Ask something...", color = secondaryText.copy(alpha = 0.5f)) },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Black.copy(alpha = 0.3f),
-                    unfocusedContainerColor = Color.Black.copy(alpha = 0.3f),
+                    focusedContainerColor = surfaceColor,
+                    unfocusedContainerColor = surfaceColor,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
+                    focusedTextColor = primaryText,
+                    unfocusedTextColor = primaryText,
                     cursorColor = Color(0xFF0A84FF)
                 ),
                 shape = RoundedCornerShape(24.dp),
@@ -333,8 +368,8 @@ private fun AVFoundContent(
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF30D158), // Green for go
                 contentColor = Color.White,
-                disabledContainerColor = Color.White.copy(alpha = 0.1f),
-                disabledContentColor = Color.White.copy(alpha = 0.3f)
+                disabledContainerColor = Color.Gray.copy(alpha = 0.1f),
+                disabledContentColor = Color.Gray.copy(alpha = 0.3f)
             ),
             shape = RoundedCornerShape(16.dp)
         ) {

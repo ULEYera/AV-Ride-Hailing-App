@@ -2,6 +2,7 @@ package com.example.avaride_1.presentation.screens.home
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -19,9 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.avaride_1.presentation.components.FrostedButton
-import com.example.avaride_1.presentation.components.FrostedGlassCard
-import com.example.avaride_1.presentation.components.GlowingMeshGradient
+// import com.example.avaride_1.presentation.components.FrostedButton // Removed
+// import com.example.avaride_1.presentation.components.FrostedGlassCard // Removed
+// import com.example.avaride_1.presentation.components.GlowingMeshGradient // Removed
 import com.example.avaride_1.presentation.components.PulsatingOrb
 
 @Composable
@@ -34,9 +35,16 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        GlowingMeshGradient()
+    // Light Theme Colors
+    val PrimaryText = Color(0xFF111827)
+    val SecondaryText = Color(0xFF374151)
+    val BackgroundColor = Color.White
+    val SurfaceColor = Color(0xFFF3F4F6)
 
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BackgroundColor)) {
+        
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -47,22 +55,34 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                ProfileAvatar(onClick = onProfileTapped)
+                // Get initials from state
+                val initials = when (uiState) {
+                    is HomeUiState.Prediction -> (uiState as HomeUiState.Prediction).userInitials
+                    is HomeUiState.NoPrediction -> (uiState as HomeUiState.NoPrediction).userInitials
+                    else -> "JD"
+                }
+                ProfileAvatar(initials = initials, onClick = onProfileTapped, primaryText = PrimaryText, surfaceColor = SurfaceColor)
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             when (uiState) {
-                is HomeUiState.Loading -> LoadingState()
+                is HomeUiState.Loading -> LoadingState(primaryText = PrimaryText, secondaryText = SecondaryText)
                 is HomeUiState.Prediction -> PredictiveDestinationCard(
                     state = uiState as HomeUiState.Prediction,
-                    onBookRide = onBookRide
+                    onBookRide = onBookRide,
+                    primaryText = PrimaryText,
+                    secondaryText = SecondaryText,
+                    surfaceColor = SurfaceColor
                 )
                 is HomeUiState.NoPrediction -> ManualInputCard(
                     onSearchTapped = onSearchTapped,
-                    onQuickDestinationSelected = onQuickDestinationSelected
+                    onQuickDestinationSelected = onQuickDestinationSelected,
+                    primaryText = PrimaryText,
+                    secondaryText = SecondaryText,
+                    surfaceColor = SurfaceColor
                 )
-                is HomeUiState.Error -> ErrorState(onRetry = { viewModel.loadPrediction() })
+                is HomeUiState.Error -> ErrorState(onRetry = { viewModel.loadPrediction() }, primaryText = PrimaryText, secondaryText = SecondaryText)
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -73,18 +93,18 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ProfileAvatar(onClick: () -> Unit) {
+private fun ProfileAvatar(initials: String, onClick: () -> Unit, primaryText: Color, surfaceColor: Color) {
     Surface(
         modifier = Modifier
             .size(48.dp)
             .clip(CircleShape)
             .clickable(onClick = onClick),
-        color = Color.Black.copy(alpha = 0.4f)
+        color = surfaceColor
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
-                text = "JD",
-                color = Color.White,
+                text = initials,
+                color = primaryText,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -93,7 +113,7 @@ private fun ProfileAvatar(onClick: () -> Unit) {
 }
 
 @Composable
-private fun LoadingState() {
+private fun LoadingState(primaryText: Color, secondaryText: Color) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(32.dp)
@@ -102,7 +122,7 @@ private fun LoadingState() {
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = "Reading your context...",
-            color = Color.White.copy(alpha = 0.7f),
+            color = secondaryText.copy(alpha = 0.7f),
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium
         )
@@ -112,7 +132,10 @@ private fun LoadingState() {
 @Composable
 private fun PredictiveDestinationCard(
     state: HomeUiState.Prediction,
-    onBookRide: () -> Unit
+    onBookRide: () -> Unit,
+    primaryText: Color,
+    secondaryText: Color,
+    surfaceColor: Color
 ) {
     var isPressed by remember { mutableStateOf(false) }
 
@@ -125,70 +148,89 @@ private fun PredictiveDestinationCard(
         label = "card_scale"
     )
 
-    FrostedGlassCard(
+    Surface(
+        color = surfaceColor,
+        shape = RoundedCornerShape(24.dp),
         modifier = Modifier
             .fillMaxWidth()
             .scale(scale)
+            .padding(16.dp)
     ) {
-        Text(
-            text = "Heading ${state.destination.name}?",
-            color = Color.White,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = state.destination.address,
-            color = Color.White.copy(alpha = 0.6f),
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            RideDetailChip(label = "Standard AV", icon = "🚗")
-            RideDetailChip(label = "${state.etaMinutes} mins", icon = "⏱️")
-            RideDetailChip(label = "$${String.format("%.2f", state.estimatedPrice)}", icon = "💳")
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        FrostedButton(
-            text = "Book Ride",
-            onClick = {
-                isPressed = true
-                onBookRide()
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (state.destination.confidence > 0.7f) {
-            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "✨ High confidence prediction",
-                color = Color(0xFF30D158).copy(alpha = 0.8f),
-                fontSize = 13.sp,
+                text = "Heading ${state.destination.name}?",
+                color = primaryText,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = state.destination.address,
+                color = secondaryText.copy(alpha = 0.6f),
+                fontSize = 16.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                RideDetailChip(label = "Standard AV", icon = "🚗", primaryText = primaryText, surfaceColor = Color.White)
+                RideDetailChip(label = "${state.etaMinutes} mins", icon = "⏱️", primaryText = primaryText, surfaceColor = Color.White)
+                RideDetailChip(label = "$${String.format("%.2f", state.estimatedPrice)}", icon = "💳", primaryText = primaryText, surfaceColor = Color.White)
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = {
+                    isPressed = true
+                    onBookRide()
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = primaryText,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(
+                    text = "Book Ride",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (state.destination.confidence > 0.7f) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "✨ High confidence prediction",
+                    color = Color(0xFF30D158).copy(alpha = 0.8f),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun RideDetailChip(label: String, icon: String) {
+private fun RideDetailChip(label: String, icon: String, primaryText: Color, surfaceColor: Color) {
     Surface(
-        color = Color.Black.copy(alpha = 0.3f),
-        shape = RoundedCornerShape(16.dp)
+        color = surfaceColor,
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 1.dp
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -198,7 +240,7 @@ private fun RideDetailChip(label: String, icon: String) {
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = label,
-                color = Color.White,
+                color = primaryText,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -207,32 +249,37 @@ private fun RideDetailChip(label: String, icon: String) {
 }
 
 @Composable
-private fun ErrorState(onRetry: () -> Unit) {
+private fun ErrorState(onRetry: () -> Unit, primaryText: Color, secondaryText: Color) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(32.dp)
     ) {
         Text(
             text = "Unable to predict destination",
-            color = Color.White,
+            color = primaryText,
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(16.dp))
-        FrostedButton(
-            text = "Try Again",
-            onClick = onRetry
-        )
+        Button(
+            onClick = onRetry,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = primaryText,
+                contentColor = Color.White
+            )
+        ) {
+            Text("Try Again")
+        }
     }
 }
 
 @Composable
-private fun SearchPill(onClick: () -> Unit) {
+private fun SearchPill(onClick: () -> Unit, primaryText: Color, surfaceColor: Color) {
     Surface(
         modifier = Modifier
             .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onClick),
-        color = Color.Black.copy(alpha = 0.3f)
+        color = surfaceColor
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
@@ -241,13 +288,13 @@ private fun SearchPill(onClick: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = Color.White.copy(alpha = 0.7f),
+                tint = primaryText.copy(alpha = 0.7f),
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Search for a place",
-                color = Color.White.copy(alpha = 0.7f),
+                color = primaryText.copy(alpha = 0.7f),
                 fontSize = 16.sp
             )
         }
@@ -257,7 +304,10 @@ private fun SearchPill(onClick: () -> Unit) {
 @Composable
 private fun ManualInputCard(
     onSearchTapped: () -> Unit,
-    onQuickDestinationSelected: (String, String, String) -> Unit
+    onQuickDestinationSelected: (String, String, String) -> Unit,
+    primaryText: Color,
+    secondaryText: Color,
+    surfaceColor: Color
 ) {
     Column(
         modifier = Modifier
@@ -267,7 +317,7 @@ private fun ManualInputCard(
     ) {
         Text(
             text = "Where to?",
-            color = Color.White,
+            color = primaryText,
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -277,7 +327,7 @@ private fun ManualInputCard(
 
         Text(
             text = "Let's get you moving",
-            color = Color.White.copy(alpha = 0.6f),
+            color = secondaryText.copy(alpha = 0.6f),
             fontSize = 16.sp,
             textAlign = TextAlign.Center
         )
@@ -287,7 +337,7 @@ private fun ManualInputCard(
         // Destination Input ONLY (pickup comes after destination selection)
         Surface(
             onClick = onSearchTapped,
-            color = Color.Black.copy(alpha = 0.3f),
+            color = surfaceColor,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -303,20 +353,20 @@ private fun ManualInputCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Enter destination",
-                        color = Color.White,
+                        color = primaryText,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = "Where do you want to go?",
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = secondaryText.copy(alpha = 0.6f),
                         fontSize = 14.sp
                     )
                 }
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = Color.White.copy(alpha = 0.7f),
+                    tint = primaryText.copy(alpha = 0.7f),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -327,7 +377,7 @@ private fun ManualInputCard(
         // Quick suggestions
         Text(
             text = "Quick Access",
-            color = Color.White.copy(alpha = 0.7f),
+            color = secondaryText.copy(alpha = 0.7f),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.fillMaxWidth()
@@ -346,7 +396,10 @@ private fun ManualInputCard(
                 onClick = {
                     onQuickDestinationSelected("Blk 174 Punggol Field", "Singapore 531174", "12.5 km")
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                primaryText = primaryText,
+                secondaryText = secondaryText,
+                surfaceColor = surfaceColor
             )
             QuickDestinationChip(
                 icon = "💼",
@@ -355,7 +408,10 @@ private fun ManualInputCard(
                 onClick = {
                     onQuickDestinationSelected("SIT Punggol Campus", "10 Dover Drive, Singapore 138683", "13.2 km")
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                primaryText = primaryText,
+                secondaryText = secondaryText,
+                surfaceColor = surfaceColor
             )
         }
 
@@ -373,7 +429,10 @@ private fun ManualInputCard(
                 onClick = {
                     onQuickDestinationSelected("Waterway Point", "83 Punggol Central, Singapore 828761", "13.8 km")
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                primaryText = primaryText,
+                secondaryText = secondaryText,
+                surfaceColor = surfaceColor
             )
             QuickDestinationChip(
                 icon = "🏥",
@@ -382,7 +441,10 @@ private fun ManualInputCard(
                 onClick = {
                     onQuickDestinationSelected("National University Hospital", "5 Lower Kent Ridge Road, Singapore 119074", "22.0 km")
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                primaryText = primaryText,
+                secondaryText = secondaryText,
+                surfaceColor = surfaceColor
             )
         }
     }
@@ -394,11 +456,14 @@ private fun QuickDestinationChip(
     label: String,
     subtitle: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    primaryText: Color,
+    secondaryText: Color,
+    surfaceColor: Color
 ) {
     Surface(
         onClick = onClick,
-        color = Color.Black.copy(alpha = 0.3f),
+        color = surfaceColor,
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
     ) {
@@ -413,13 +478,13 @@ private fun QuickDestinationChip(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = label,
-                color = Color.White,
+                color = primaryText,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = subtitle,
-                color = Color.White.copy(alpha = 0.6f),
+                color = secondaryText.copy(alpha = 0.6f),
                 fontSize = 11.sp,
                 textAlign = TextAlign.Center
             )
