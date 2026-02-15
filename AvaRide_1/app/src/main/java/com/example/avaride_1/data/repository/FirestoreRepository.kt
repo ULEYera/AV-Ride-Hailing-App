@@ -1,23 +1,11 @@
 package com.example.avaride_1.data.repository
 
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
 import android.util.Log
-
-data class User(
-    val phoneNumber: String = "",
-    val name: String = "",
-    val createdAt: Long = System.currentTimeMillis()
-)
-
-data class Trip(
-    val id: String = "",
-    val phoneNumber: String = "",
-    val destination: String = "",
-    val pickup: String = "",
-    val cost: Double = 0.0,
-    val timestamp: Long = System.currentTimeMillis()
-)
+import com.example.avaride_1.domain.model.Trip
+import com.example.avaride_1.domain.model.User
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.tasks.await
 
 class FirestoreRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -53,6 +41,40 @@ class FirestoreRepository {
                 .await()
         } catch (e: Exception) {
             Log.e("FirestoreRepository", "Error saving trip", e)
+            throw e
+        }
+    }
+
+    suspend fun getTripHistory(phoneNumber: String): List<Trip> {
+        return try {
+            val snapshot = usersCollection.document(phoneNumber)
+                .collection("trips")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .await()
+            snapshot.toObjects(Trip::class.java)
+        } catch (e: Exception) {
+            Log.e("FirestoreRepository", "Error fetching trip history", e)
+            emptyList()
+        }
+    }
+
+    suspend fun updateUserLocation(phoneNumber: String, type: String, address: String) {
+        try {
+            val field = if (type == "Home") "homeLocation" else "workLocation"
+            val updates = mapOf(field to address)
+            usersCollection.document(phoneNumber).update(updates).await()
+        } catch (e: Exception) {
+            Log.e("FirestoreRepository", "Error updating location", e)
+            throw e
+        }
+    }
+
+    suspend fun updatePaymentMethod(phoneNumber: String, method: String) {
+        try {
+            usersCollection.document(phoneNumber).update("paymentMethod", method).await()
+        } catch (e: Exception) {
+            Log.e("FirestoreRepository", "Error updating payment method", e)
             throw e
         }
     }

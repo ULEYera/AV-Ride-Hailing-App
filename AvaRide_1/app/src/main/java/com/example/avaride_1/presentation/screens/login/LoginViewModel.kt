@@ -30,6 +30,10 @@ class LoginViewModel(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
+    fun resetState() {
+        _uiState.value = LoginUiState()
+    }
+
     fun onPhoneNumberChange(phone: String) {
         _uiState.update { it.copy(phoneNumber = phone, error = null) }
     }

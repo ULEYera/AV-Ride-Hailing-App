@@ -24,12 +24,14 @@ import com.example.avaride_1.domain.model.LightingMode
 // import com.example.avaride_1.presentation.components.FrostedGlassCard // Removed
 // import com.example.avaride_1.presentation.components.GlowingMeshGradient // Removed
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InRideScreen(
     viewModel: InRideViewModel,
     onEmergencyStop: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showChat by remember { mutableStateOf(false) }
 
     // Light Theme Colors
     val PrimaryText = Color(0xFF111827)
@@ -155,6 +157,32 @@ fun InRideScreen(
                     surfaceColor = Color(0xFFFF3B30).copy(alpha = 0.1f),
                     contentColor = Color(0xFFFF3B30)
                 )
+            }
+        }
+        // 4. AI Chat Button
+        FloatingActionButton(
+            onClick = { showChat = true },
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(bottom = 300.dp, end = 16.dp),
+            containerColor = Color.White,
+            contentColor = Color(0xFF0A84FF)
+        ) {
+            Icon(Icons.Default.Phone, contentDescription = "AI Chat") // Using Phone icon as placeholder for Chat/Support
+        }
+
+        if (showChat) {
+            ModalBottomSheet(
+                onDismissRequest = { showChat = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = Color.White,
+                dragHandle = { BottomSheetDefaults.DragHandle() }
+            ) {
+                Box(modifier = Modifier.fillMaxHeight(0.8f)) {
+                    com.example.avaride_1.presentation.screens.chat.ChatScreen(
+                        onBack = { showChat = false }
+                    )
+                }
             }
         }
     }

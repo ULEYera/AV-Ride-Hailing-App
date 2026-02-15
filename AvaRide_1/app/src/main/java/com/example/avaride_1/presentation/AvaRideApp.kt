@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,13 +53,22 @@ fun AvaRideApp() {
     val firestoreRepository = remember { com.example.avaride_1.data.repository.FirestoreRepository() }
     val userPrefs = remember { com.example.avaride_1.data.repository.UserPreferencesRepository(context) }
     
+    // ViewModels
+    val loginViewModel = remember { com.example.avaride_1.presentation.screens.login.LoginViewModel(firestoreRepository, userPrefs) }
+    val homeViewModel = remember { HomeViewModel(geminiService, firestoreRepository, userPrefs) }
+    val bookingViewModel = remember { BookingViewModel() }
+    val inRideViewModel = remember { InRideViewModel(firestoreRepository, userPrefs) }
+    val settingsViewModel = remember { SettingsViewModel(firestoreRepository, userPrefs) }
+
     // Session State
     var isCheckingSession by remember { mutableStateOf(true) }
     var startDest by remember { mutableStateOf(Screen.Login.route) }
 
     // Check session on launch
     LaunchedEffect(Unit) {
-        userPrefs.userPhoneNumber.collect { phone ->
+        userPrefs.userPhoneNumber
+            .distinctUntilChanged()
+            .collect { phone ->
             println("SESSION_DEBUG: Phone state changed: $phone")
             if (isCheckingSession) {
                 if (!phone.isNullOrBlank()) {
@@ -72,8 +82,17 @@ fun AvaRideApp() {
                 // Runtime check (e.g. after logout)
                 if (phone.isNullOrBlank()) {
                     println("SESSION_DEBUG: Session cleared, navigating to Login")
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
+                    // Reset ViewModels if needed
+                    bookingViewModel.clearBookingData()
+                    
+                    try {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    } catch (e: Exception) {
+                        println("SESSION_DEBUG: Navigation failed: ${e.message}")
+                        e.printStackTrace()
                     }
                 }
             }
@@ -87,13 +106,6 @@ fun AvaRideApp() {
         }
         return
     }
-
-    // ViewModels
-    val loginViewModel = remember { com.example.avaride_1.presentation.screens.login.LoginViewModel(firestoreRepository, userPrefs) }
-    val homeViewModel = remember { HomeViewModel(geminiService, firestoreRepository, userPrefs) }
-    val bookingViewModel = remember { BookingViewModel() }
-    val inRideViewModel = remember { InRideViewModel(firestoreRepository, userPrefs) }
-    val settingsViewModel = remember { SettingsViewModel(firestoreRepository, userPrefs) }
 
     NavHost(
         navController = navController,
@@ -413,6 +425,18 @@ fun AvaRideApp() {
     if (showSettings) {
         SettingsSheet(
             onDismiss = { showSettings = false },
+            onLogout = {
+                // Explicit logout sequence
+                settingsViewModel.logout()
+                bookingViewModel.clearBookingData()
+                loginViewModel.resetState() // Clear isLoggedIn so Login screen doesn't auto-redirect
+                showSettings = false
+                
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.Home.route) { inclusive = true }
+                    launchSingleTop = true
+                }
+            },
             viewModel = settingsViewModel,
             isRideActive = bookingViewModel.isRideActive.collectAsState().value
         )

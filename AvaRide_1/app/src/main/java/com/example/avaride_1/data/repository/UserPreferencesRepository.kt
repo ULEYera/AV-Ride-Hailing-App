@@ -26,8 +26,10 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     suspend fun clearUser() {
+        println("UserPrefs: clearUser called")
         context.dataStore.edit { preferences ->
             preferences.remove(PHONE_NUMBER_KEY)
         }
+        println("UserPrefs: clearUser completed")
     }
 }

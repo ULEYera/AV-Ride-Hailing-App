@@ -1,6 +1,5 @@
 package com.example.avaride_1.presentation.screens.settings
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,23 +19,86 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.avaride_1.domain.model.PaymentMethod
 
 // Color Palette
 private val LightBackground = Color.White
 private val LightSurface = Color(0xFFF5F5F7)
-private val PrimaryText = Color(0xFF111827) // Dark Grey
-private val SecondaryText = Color(0xFF222222) // Slightly Lighter Dark Grey
+private val PrimaryText = Color(0xFF111827)
+private val SecondaryText = Color(0xFF222222)
 private val AccentBlue = Color(0xFF0A84FF)
-private val AccentGreen = Color(0xFF30D158)
 private val DestructiveRed = Color(0xFFFF3B30)
 
 @Composable
 fun SettingsSheet(
     onDismiss: () -> Unit,
+    onLogout: () -> Unit,
     viewModel: SettingsViewModel,
     isRideActive: Boolean = false
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showHistory by remember { mutableStateOf(false) }
+    var locationDialogType by remember { mutableStateOf<String?>(null) } // "Home" or "Work"
+    var showPaymentDialog by remember { mutableStateOf(false) }
+
+    // Handlers
+    if (showHistory) {
+        HistoryScreen(
+            rideHistory = uiState.rideHistory,
+            onBack = { showHistory = false }
+        )
+        return // Show only history screen
+    }
+
+    if (locationDialogType != null) {
+        LocationSettingDialog(
+            type = locationDialogType!!,
+            currentAddress = if (locationDialogType == "Home") uiState.homeLocation else uiState.workLocation,
+            onConfirm = { address ->
+                viewModel.updateLocation(locationDialogType!!, address)
+                locationDialogType = null
+            },
+            onDismiss = { locationDialogType = null }
+        )
+    }
+
+    if (showPaymentDialog) {
+        AlertDialog(
+            onDismissRequest = { showPaymentDialog = false },
+            title = { Text("Select Payment Method") },
+            text = {
+                Column {
+                    PaymentMethod.values().forEach { method ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.updatePaymentMethod(method)
+                                    showPaymentDialog = false
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = uiState.paymentMethod == method,
+                                onClick = {
+                                    viewModel.updatePaymentMethod(method)
+                                    showPaymentDialog = false
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(method.name.replace("_", " "))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPaymentDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -62,6 +124,7 @@ fun SettingsSheet(
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .background(LightBackground)
                     .padding(24.dp)
+                    .navigationBarsPadding()
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -107,39 +170,29 @@ fun SettingsSheet(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
-                        ControlCenterToggle(
-                            title = "Quiet Mode",
-                            subtitle = if (uiState.quietMode) "On" else "Off",
-                            icon = Icons.Default.Notifications,
-                            isActive = uiState.quietMode,
-                            onClick = { viewModel.toggleQuietMode() }
-                        )
-                    }
-
-                    item {
                         ControlCenterCard(
                             title = "Payment",
                             subtitle = uiState.paymentMethod.name.replace("_", " "),
                             icon = Icons.Default.AccountBox,
-                            onClick = { }
+                            onClick = { showPaymentDialog = true }
                         )
                     }
 
                     item {
                         ControlCenterCard(
                             title = "Home",
-                            subtitle = "Set location",
+                            subtitle = uiState.homeLocation.ifBlank { "Set location" },
                             icon = Icons.Default.Home,
-                            onClick = { }
+                            onClick = { locationDialogType = "Home" }
                         )
                     }
 
                     item {
                         ControlCenterCard(
                             title = "Work",
-                            subtitle = "Set location",
+                            subtitle = uiState.workLocation.ifBlank { "Set location" },
                             icon = Icons.Default.Place,
-                            onClick = { }
+                            onClick = { locationDialogType = "Work" }
                         )
                     }
 
@@ -148,26 +201,17 @@ fun SettingsSheet(
                             title = "History",
                             subtitle = "${uiState.rideCount} rides",
                             icon = Icons.Default.Star,
-                            onClick = { }
-                        )
-                    }
-
-                    item {
-                        ControlCenterCard(
-                            title = "Support",
-                            subtitle = "Get help",
-                            icon = Icons.Default.Info,
-                            onClick = { }
+                            onClick = { showHistory = true }
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.weight(1f)) // Push logout to bottom
 
                 Button(
                     onClick = {
                         if (!isRideActive) {
-                            viewModel.logout()
+                            onLogout()
                             onDismiss()
                         }
                     },
@@ -186,59 +230,6 @@ fun SettingsSheet(
                         fontWeight = FontWeight.Bold
                     )
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                QuickSettingsList(
-                    preferences = uiState.preferences,
-                    onPreferenceChange = { key, value ->
-                        viewModel.updatePreference(key, value)
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ControlCenterToggle(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    isActive: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        color = if (isActive) AccentBlue.copy(alpha = 0.1f) else LightSurface,
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(120.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = if (isActive) AccentBlue else PrimaryText.copy(alpha = 0.8f),
-                modifier = Modifier.size(28.dp)
-            )
-
-            Column {
-                Text(
-                    text = title,
-                    color = PrimaryText,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = subtitle,
-                    color = SecondaryText.copy(alpha = 0.6f),
-                    fontSize = 13.sp
-                )
             }
         }
     }
@@ -280,61 +271,9 @@ private fun ControlCenterCard(
                 Text(
                     text = subtitle,
                     color = SecondaryText.copy(alpha = 0.6f),
-                    fontSize = 13.sp
+                    fontSize = 13.sp,
+                    maxLines = 1
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickSettingsList(
-    preferences: Map<String, Boolean>,
-    onPreferenceChange: (String, Boolean) -> Unit
-) {
-    Surface(
-        color = LightSurface,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Quick Settings",
-                color = SecondaryText.copy(alpha = 0.6f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            preferences.forEach { (key, value) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = key.replace("_", " ").replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase() else it.toString()
-                        },
-                        color = PrimaryText,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Switch(
-                        checked = value,
-                        onCheckedChange = { onPreferenceChange(key, it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = AccentGreen,
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
-                        )
-                    )
-                }
             }
         }
     }

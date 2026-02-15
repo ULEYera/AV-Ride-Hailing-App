@@ -73,26 +73,31 @@ class InRideViewModel(
                 val currentLat = startLat + (endLat - startLat) * progress
                 val currentLng = startLng + (endLng - startLng) * progress
 
-                if (elapsedSeconds >= durationSeconds) {
-                    // Save trip to Firestore
-                    val phoneNumber = userPrefs?.userPhoneNumber?.firstOrNull()
-                    if (!phoneNumber.isNullOrBlank() && firestoreRepository != null) {
-                        launch {
-                             try {
-                                 val trip = com.example.avaride_1.data.repository.Trip(
-                                     id = java.util.UUID.randomUUID().toString(),
-                                     phoneNumber = phoneNumber,
-                                     destination = _uiState.value.destination,
-                                     pickup = "Current Location", // Simplified
-                                     cost = 12.50
-                                 )
-                                 firestoreRepository.saveTrip(trip)
-                             } catch (e: Exception) {
-                                 e.printStackTrace() // Log error
-                             }
-                        }
-                    }
-                }
+                            // Save trip to Firestore
+                            val phoneNumber = userPrefs?.userPhoneNumber?.firstOrNull()
+                            if (!phoneNumber.isNullOrBlank() && firestoreRepository != null) {
+                                // Launch in global scope or similar if ViewModel scope is cancelled, but here we just launch in existing scope
+                                launch {
+                                     try {
+                                         val trip = com.example.avaride_1.domain.model.Trip(
+                                             id = java.util.UUID.randomUUID().toString(),
+                                             phoneNumber = phoneNumber,
+                                             destination = _uiState.value.destination,
+                                             pickup = "Current Location", // Simplified
+                                             cost = 12.50,
+                                             distance = "5.2 km",
+                                             duration = "18 mins",
+                                             pickupLat = startLat,
+                                             pickupLng = startLng,
+                                             destLat = endLat,
+                                             destLng = endLng
+                                         )
+                                         firestoreRepository.saveTrip(trip)
+                                     } catch (e: Exception) {
+                                         e.printStackTrace() // Log error
+                                     }
+                                }
+                            }
 
                 _uiState.update {
                     it.copy(
