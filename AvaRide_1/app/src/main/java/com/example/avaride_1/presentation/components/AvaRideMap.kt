@@ -8,6 +8,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import org.osmdroid.util.GeoPoint
 
+// Helper function to fetch route - MOVED TO OsrmRepository.kt
+// Use OsrmRepository instead.
+
 /**
  * AvaRide Map Component for displaying destination and pickup locations
  * Uses OSMDroid (OpenStreetMap)
@@ -17,6 +20,7 @@ fun AvaRideMap(
     destinationLatLng: GeoPoint,
     pickupLatLng: GeoPoint? = null,
     showRoute: Boolean = false,
+    routePoints: List<GeoPoint> = emptyList(), // Added support for custom route path
     modifier: Modifier = Modifier
 ) {
     val markers = remember(destinationLatLng, pickupLatLng) {
@@ -28,8 +32,11 @@ fun AvaRideMap(
         list
     }
 
-    val polylines = remember(destinationLatLng, pickupLatLng, showRoute) {
-        if (showRoute && pickupLatLng != null) {
+    // Use provided routePoints if available, otherwise straight line if showRoute is true
+    val polylines = remember(destinationLatLng, pickupLatLng, showRoute, routePoints) {
+        if (routePoints.isNotEmpty()) {
+            listOf(routePoints)
+        } else if (showRoute && pickupLatLng != null) {
             listOf(listOf(pickupLatLng, destinationLatLng))
         } else {
             emptyList()
@@ -68,7 +75,7 @@ fun DestinationPreviewMap(
 }
 
 /**
- * Full booking map showing both pickup and destination
+ * Full booking map showing both pickup and destination with Road Routing
  */
 @Composable
 fun BookingRouteMap(
@@ -80,17 +87,26 @@ fun BookingRouteMap(
 ) {
     val destination = GeoPoint(destinationLat, destinationLng)
     val pickup = GeoPoint(pickupLat, pickupLng)
+    
+    var routePoints by remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
+    val repo = remember { com.example.avaride_1.data.repository.OsrmRepository() }
+
+    // Fetch road-based route
+    LaunchedEffect(destination, pickup) {
+        routePoints = repo.fetchRoute(pickup, destination)
+    }
 
     AvaRideMap(
         destinationLatLng = destination,
         pickupLatLng = pickup,
         showRoute = true,
+        routePoints = routePoints,
         modifier = modifier
     )
 }
 
 /**
- * Live Ride Map showing moving vehicle
+ * Live Ride Map showing moving vehicle and road-based route
  */
 @Composable
 fun LiveRideMap(
@@ -98,10 +114,15 @@ fun LiveRideMap(
     vehicleLng: Double,
     destinationLat: Double,
     destinationLng: Double,
+    routePoints: List<GeoPoint> = emptyList(), // Pass route from ViewModel
     modifier: Modifier = Modifier
 ) {
     val vehiclePos = GeoPoint(vehicleLat, vehicleLng)
     val destPos = GeoPoint(destinationLat, destinationLng)
+
+    // Note: In LiveRideMap, we now expect the ViewModel to provide the routePoints
+    // But we can keep a local fetch fallback if routePoints is empty for some reason, 
+    // OR just rely on VM. For now, rely on VM as per plan.
 
     val markers = remember(vehiclePos, destPos) {
         listOf(
@@ -110,8 +131,13 @@ fun LiveRideMap(
         )
     }
 
-    val polylines = remember(vehiclePos, destPos) {
-        listOf(listOf(vehiclePos, destPos))
+    // Use fetched route if available, otherwise straight line
+    val polylines = remember(vehiclePos, destPos, routePoints) {
+        if (routePoints.isNotEmpty()) {
+            listOf(routePoints)
+        } else {
+            listOf(listOf(vehiclePos, destPos))
+        }
     }
 
     OsmdroidMapView(
@@ -119,8 +145,8 @@ fun LiveRideMap(
         center = vehiclePos, // Follow vehicle
         zoom = 16.0,
         markers = markers,
-        polylines = polylines, // Route polyline
-        showUserLocation = true // Live GPS if enabled on device
+        polylines = polylines, // Road based route
+        showUserLocation = true
     )
 }
 

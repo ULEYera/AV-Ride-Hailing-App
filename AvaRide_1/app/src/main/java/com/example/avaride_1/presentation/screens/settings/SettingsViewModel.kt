@@ -34,28 +34,48 @@ class SettingsViewModel(
         loadUserProfile()
     }
 
+    private var currentPhoneNumber: String? = null
+
+    init {
+        loadUserProfile()
+    }
+
     private fun loadUserProfile() {
         viewModelScope.launch {
             userPrefs?.userPhoneNumber?.collect { phoneNumber ->
+                currentPhoneNumber = phoneNumber
                 if (!phoneNumber.isNullOrBlank() && firestoreRepository != null) {
-                    try {
-                        val user = firestoreRepository.getUser(phoneNumber)
-                        if (user != null) {
-                             _uiState.update { 
-                                 it.copy(
-                                     userName = user.name,
-                                     homeLocation = user.homeLocation ?: "",
-                                     workLocation = user.workLocation ?: "",
-                                     paymentMethod = if (user.paymentMethod != null) PaymentMethod.valueOf(user.paymentMethod) else PaymentMethod.GOOGLE_PAY
-                                 ) 
-                             }
-                             loadRideHistory(phoneNumber)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    fetchUserData(phoneNumber)
                 }
             }
+        }
+    }
+
+    fun refreshData() {
+        viewModelScope.launch {
+            val phone = currentPhoneNumber ?: userPrefs?.userPhoneNumber?.firstOrNull()
+            if (!phone.isNullOrBlank() && firestoreRepository != null) {
+                fetchUserData(phone)
+            }
+        }
+    }
+
+    private suspend fun fetchUserData(phoneNumber: String) {
+        try {
+            val user = firestoreRepository?.getUser(phoneNumber)
+            if (user != null) {
+                 _uiState.update { 
+                     it.copy(
+                         userName = user.name,
+                         homeLocation = user.homeLocation ?: "",
+                         workLocation = user.workLocation ?: "",
+                         paymentMethod = if (user.paymentMethod != null) PaymentMethod.valueOf(user.paymentMethod) else PaymentMethod.GOOGLE_PAY
+                     ) 
+                 }
+                 loadRideHistory(phoneNumber)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
     

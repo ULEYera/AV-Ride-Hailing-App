@@ -41,6 +41,10 @@ fun SettingsSheet(
     var locationDialogType by remember { mutableStateOf<String?>(null) } // "Home" or "Work"
     var showPaymentDialog by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        viewModel.refreshData()
+    }
+
     // Handlers
     if (showHistory) {
         HistoryScreen(

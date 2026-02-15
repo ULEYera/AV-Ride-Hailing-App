@@ -51,6 +51,7 @@ fun InRideScreen(
             vehicleLng = uiState.currentLng,
             destinationLat = 1.3644, // Hardcoded Changi for demo, should match VM end
             destinationLng = 103.9915,
+            routePoints = uiState.routePoints,
             modifier = Modifier.fillMaxSize()
         )
 

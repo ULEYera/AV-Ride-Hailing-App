@@ -22,7 +22,8 @@ data class InRideUiState(
     val isPlaying: Boolean = false,
     val currentLat: Double = 1.3048,
     val currentLng: Double = 103.8318,
-    val isRideComplete: Boolean = false
+    val isRideComplete: Boolean = false,
+    val routePoints: List<org.osmdroid.util.GeoPoint> = emptyList()
 )
 
 class InRideViewModel(
@@ -38,10 +39,12 @@ class InRideViewModel(
     private val endLat = 1.3644
     private val endLng = 103.9915
 
+    private val osrmRepository = com.example.avaride_1.data.repository.OsrmRepository()
+
     fun startJourney() {
         // Run simulation in a coroutine
-        // Total duration: 20 seconds
-        val durationSeconds = 20
+        // Total duration: 60 seconds (Slower ride)
+        val durationSeconds = 60
         val updateIntervalMillis = 1000L // Update every second
 
         // Reset state
@@ -50,17 +53,30 @@ class InRideViewModel(
                 progress = 0f, 
                 remainingMinutes = 1, // < 1 min
                 currentLat = startLat,
-                currentLng = startLng
+                currentLng = startLng,
+                routePoints = emptyList() // Clear previous route
             ) 
         }
 
         // Launch simulation
-        // In a real app, this would be a repository flow or worker
-        // Using viewModelScope for demo simplicity
-        val viewModelScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main) // using main for immediate demo updates
+        val viewModelScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
         
         viewModelScope.launch {
+            // 1. Fetch Route first
+            val startPoint = org.osmdroid.util.GeoPoint(startLat, startLng)
+            val endPoint = org.osmdroid.util.GeoPoint(endLat, endLng)
+            val route = osrmRepository.fetchRoute(startPoint, endPoint)
+            
+            _uiState.update { it.copy(routePoints = route) }
+
+            // 2. Simulate Movement along route
             var elapsedSeconds = 0
+            
+            // If route fetch failed, fallback to straight line (start -> end)
+            val path = if (route.isNotEmpty()) route else listOf(startPoint, endPoint)
+            val totalPathDistance = calculateTotalAuthDistance(path) // Rough approximation in indices or meters? 
+            // For simplicity in demo: we will interpolate based on time purely across the index range of the list
+            
             while (elapsedSeconds <= durationSeconds) {
                 delay(updateIntervalMillis)
                 elapsedSeconds++
@@ -69,16 +85,15 @@ class InRideViewModel(
                 val remainingSeconds = durationSeconds - elapsedSeconds
                 val remainingMinutes = (remainingSeconds / 60) + if (remainingSeconds % 60 > 0) 1 else 0
 
-                // Linear Interpolation for coordinates
-                val currentLat = startLat + (endLat - startLat) * progress
-                val currentLng = startLng + (endLng - startLng) * progress
+                // Interpolate Position along the Path
+                val currentPos = interpolatePath(path, progress)
 
                 _uiState.update {
                     it.copy(
                         progress = progress,
                         remainingMinutes = remainingMinutes,
-                        currentLat = currentLat,
-                        currentLng = currentLng,
+                        currentLat = currentPos.latitude,
+                        currentLng = currentPos.longitude,
                         isRideComplete = elapsedSeconds >= durationSeconds
                     )
                 }
@@ -111,6 +126,36 @@ class InRideViewModel(
                  }
             }
         }
+    }
+
+    private fun interpolatePath(path: List<org.osmdroid.util.GeoPoint>, progress: Float): org.osmdroid.util.GeoPoint {
+        if (path.isEmpty()) return org.osmdroid.util.GeoPoint(0.0, 0.0)
+        if (path.size == 1) return path.first()
+        if (progress <= 0f) return path.first()
+        if (progress >= 1f) return path.last()
+
+        // Total segments
+        val totalSegments = path.size - 1
+        // Exact position in standard params
+        val exactIndex = progress * totalSegments
+        val index = exactIndex.toInt()
+        val segmentProgress = exactIndex - index
+        
+        // Safety check
+        if (index >= totalSegments) return path.last()
+
+        val p1 = path[index]
+        val p2 = path[index + 1]
+
+        val lat = p1.latitude + (p2.latitude - p1.latitude) * segmentProgress
+        val lng = p1.longitude + (p2.longitude - p1.longitude) * segmentProgress
+
+        return org.osmdroid.util.GeoPoint(lat, lng)
+    }
+
+    // Unused helper, but good for future real distance calculation
+    private fun calculateTotalAuthDistance(path: List<org.osmdroid.util.GeoPoint>): Double {
+        return 0.0 
     }
 
     fun updateTemperature(temp: Int) {
