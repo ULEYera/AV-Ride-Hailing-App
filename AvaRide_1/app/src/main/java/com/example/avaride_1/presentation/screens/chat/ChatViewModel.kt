@@ -37,7 +37,12 @@ class ChatViewModel : ViewModel() {
     init {
         val apiKey = BuildConfig.GROQ_API_KEY
 
+        // Logging Interceptor
+        val logging = okhttp3.logging.HttpLoggingInterceptor()
+        logging.setLevel(okhttp3.logging.HttpLoggingInterceptor.Level.BODY)
+
         val client = OkHttpClient.Builder()
+            .addInterceptor(logging) // Add logging
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("Authorization", "Bearer $apiKey")
@@ -67,8 +72,7 @@ class ChatViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                // Prepare conversation history (simplified: just the last user message for now, 
-                // but ideally send full context)
+                // Prepare conversation history
                 val groqMessages = listOf(
                     GroqMessage(role = "system", content = "You are Ava, a helpful ride-hailing assistant."),
                     GroqMessage(role = "user", content = text)
@@ -76,7 +80,7 @@ class ChatViewModel : ViewModel() {
 
                 val request = GroqRequest(
                     messages = groqMessages,
-                    model = "llama3-8b-8192" // Fast and efficient
+                    model = "llama-3.3-70b-versatile" // Updated to supported model
                 )
 
                 val response = groqService.chatCompletion(request)
@@ -92,5 +96,13 @@ class ChatViewModel : ViewModel() {
                 _isLoading.value = false
             }
         }
+    }
+
+    /**
+     * Adds a message from the AI directly (e.g. system greeting).
+     */
+    fun addAiMessage(text: String) {
+        val message = ChatMessage(text = text, isUser = false)
+        _messages.value += message
     }
 }

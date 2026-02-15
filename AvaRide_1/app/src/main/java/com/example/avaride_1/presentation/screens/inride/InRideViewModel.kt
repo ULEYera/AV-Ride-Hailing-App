@@ -15,7 +15,7 @@ import com.example.avaride_1.data.repository.UserPreferencesRepository
 
 data class InRideUiState(
     val destination: String = "Home",
-    val remainingMinutes: Int = 2,
+    val remainingMinutes: Int = 1,
     val progress: Float = 0.0f, // 0.0 to 1.0
     val temperature: Int = 22,
     val lightingMode: LightingMode = LightingMode.WARM,
@@ -40,15 +40,15 @@ class InRideViewModel(
 
     fun startJourney() {
         // Run simulation in a coroutine
-        // Total duration: 120 seconds (2 minutes)
-        val durationSeconds = 120
+        // Total duration: 20 seconds
+        val durationSeconds = 20
         val updateIntervalMillis = 1000L // Update every second
 
         // Reset state
         _uiState.update { 
             it.copy(
                 progress = 0f, 
-                remainingMinutes = 2,
+                remainingMinutes = 1, // < 1 min
                 currentLat = startLat,
                 currentLng = startLng
             ) 
@@ -57,7 +57,7 @@ class InRideViewModel(
         // Launch simulation
         // In a real app, this would be a repository flow or worker
         // Using viewModelScope for demo simplicity
-        val viewModelScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main) // using main for immediate updates in demo
+        val viewModelScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main) // using main for immediate demo updates
         
         viewModelScope.launch {
             var elapsedSeconds = 0
@@ -73,32 +73,6 @@ class InRideViewModel(
                 val currentLat = startLat + (endLat - startLat) * progress
                 val currentLng = startLng + (endLng - startLng) * progress
 
-                            // Save trip to Firestore
-                            val phoneNumber = userPrefs?.userPhoneNumber?.firstOrNull()
-                            if (!phoneNumber.isNullOrBlank() && firestoreRepository != null) {
-                                // Launch in global scope or similar if ViewModel scope is cancelled, but here we just launch in existing scope
-                                launch {
-                                     try {
-                                         val trip = com.example.avaride_1.domain.model.Trip(
-                                             id = java.util.UUID.randomUUID().toString(),
-                                             phoneNumber = phoneNumber,
-                                             destination = _uiState.value.destination,
-                                             pickup = "Current Location", // Simplified
-                                             cost = 12.50,
-                                             distance = "5.2 km",
-                                             duration = "18 mins",
-                                             pickupLat = startLat,
-                                             pickupLng = startLng,
-                                             destLat = endLat,
-                                             destLng = endLng
-                                         )
-                                         firestoreRepository.saveTrip(trip)
-                                     } catch (e: Exception) {
-                                         e.printStackTrace() // Log error
-                                     }
-                                }
-                            }
-
                 _uiState.update {
                     it.copy(
                         progress = progress,
@@ -108,6 +82,33 @@ class InRideViewModel(
                         isRideComplete = elapsedSeconds >= durationSeconds
                     )
                 }
+            }
+
+            // Ride Complete - Save Trip ONCE
+            if (firestoreRepository != null) {
+                 try {
+                     val phoneNumber = userPrefs?.userPhoneNumber?.firstOrNull()
+                     
+                     if (!phoneNumber.isNullOrBlank()) {
+                         val trip = com.example.avaride_1.domain.model.Trip(
+                             id = java.util.UUID.randomUUID().toString(),
+                             phoneNumber = phoneNumber,
+                             destination = _uiState.value.destination,
+                             pickup = "Current Location",
+                             cost = 12.50,
+                             distance = "5.2 km",
+                             duration = "18 mins",
+                             pickupLat = startLat,
+                             pickupLng = startLng,
+                             destLat = endLat,
+                             destLng = endLng,
+                             timestamp = System.currentTimeMillis()
+                         )
+                         firestoreRepository.saveTrip(trip)
+                     }
+                 } catch (e: Exception) {
+                     e.printStackTrace()
+                 }
             }
         }
     }

@@ -25,26 +25,26 @@ import com.example.avaride_1.presentation.screens.search.SearchLocation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-data class ChatMessage(
-    val text: String,
-    val isUser: Boolean,
-    val timestamp: Long = System.currentTimeMillis()
-)
+// Local ChatMessage class removed in favor of Shared ViewModel's class
+import com.example.avaride_1.presentation.screens.chat.ChatViewModel
+import com.example.avaride_1.presentation.screens.chat.ChatMessage
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun BookingStatusScreen(
     destination: SearchLocation,
     arrivalTime: Long?,
     onUnlock: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    chatViewModel: ChatViewModel = viewModel()
 ) {
     // If arrivalTime is set, we skip the finding phase
     var isFinding by remember { mutableStateOf(arrivalTime == null) }
     var avId by remember { mutableStateOf("AV-SG-4042") } // Mock ID
-    /* 
-       We calculate etaMinutes dynamically based on arrivalTime.
-       If arrivalTime is null (finding), we default to 2.
-    */
+    
+    // Chat State from ViewModel
+    val chatMessages by chatViewModel.messages.collectAsState()
+    val isAiLoading by chatViewModel.isLoading.collectAsState()
     
     // Handle Back Press
     androidx.activity.compose.BackHandler {
@@ -110,8 +110,17 @@ fun BookingStatusScreen(
                         delay(1000)
                     }
                 } else {
-                    // Fallback simulation if no arrivalTime passed (shouldn't happen with ViewModel)
+                    // Fallback simulation
                     timeRemainingSeconds = 120
+                }
+            }
+            
+            // Trigger welcome message if empty
+            LaunchedEffect(Unit) {
+                if (chatMessages.isEmpty()) {
+                    // Send the specific greeting requested by the user
+                    val timeString = if (timeRemainingSeconds > 0) "${timeRemainingSeconds} seconds" else "a moment"
+                    chatViewModel.addAiMessage("Hi I'm your autonomous vehicle, I'll arrive in $timeString and please wait at your designated pickup point.")
                 }
             }
 
@@ -122,7 +131,10 @@ fun BookingStatusScreen(
                 onUnlock = onUnlock,
                 primaryText = PrimaryText,
                 secondaryText = SecondaryText,
-                surfaceColor = SurfaceColor
+                surfaceColor = SurfaceColor,
+                chatMessages = chatMessages,
+                onSendMessage = { chatViewModel.sendMessage(it) },
+                isAiLoading = isAiLoading
             )
         }
     }
@@ -159,18 +171,8 @@ fun ChatBubble(message: ChatMessage) {
                 fontSize = 15.sp
             )
         }
-    }
-}
-
-// Simple mock AI response logic
-fun getMockAIResponse(query: String): String {
-    val q = query.lowercase()
-    return when {
-        "hello" in q || "hi" in q -> "Hello there! I'm driving autonomously to your pickup point."
-        "long" in q || "time" in q || "wait" in q -> "Traffic is a bit heavy, but I'm optimizing my route. ETA is accurate!"
-        "music" in q -> "I can play your favorite playlist. Just ask when you get in!"
-        "temp" in q || "cold" in q -> "I've set the temperature to a comfortable 22°C."
-        else -> "I understand. I'm focused on driving safely to you!"
+        
+        // Timestamp/Status could go here
     }
 }
 
@@ -182,25 +184,13 @@ private fun AVFoundContent(
     onUnlock: () -> Unit,
     primaryText: Color,
     secondaryText: Color,
-    surfaceColor: Color
+    surfaceColor: Color,
+    chatMessages: List<ChatMessage>,
+    onSendMessage: (String) -> Unit,
+    isAiLoading: Boolean
 ) {
-    var chatMessages by remember { mutableStateOf(listOf(
-        ChatMessage("👋 Hi! I'm Ava, your AV assistant. I'm on my way!", false)
-    )) }
     var inputText by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
-    
     val isArrived = timeRemainingSeconds <= 0
- 
-    // Trigger AI message when close (handled in effect or just check time)
-    LaunchedEffect(timeRemainingSeconds) {
-        if (timeRemainingSeconds == 60L) {
-             chatMessages = chatMessages + ChatMessage("I'm just 1 minute away now!", false)
-        }
-        if (timeRemainingSeconds == 0L) {
-             chatMessages = chatMessages + ChatMessage("I've arrived! Please unlock the vehicle.", false)
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -286,9 +276,17 @@ private fun AVFoundContent(
             reverseLayout = true, // Show newest at bottom (requires reversing list)
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
+            // Messages are already chrono order in VM, but reversed layout needs reversed list?
+            // ChatViewModel adds new to end. 
+            // If reverseLayout=true, item 0 is at bottom. 
+            // So we should pass the list reversed() so newest (last) is at index 0 (bottom).
             items(chatMessages.reversed()) { message ->
                 ChatBubble(message)
             }
+        }
+        
+        if (isAiLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
         }
 
         // Input Field
@@ -301,7 +299,7 @@ private fun AVFoundContent(
             TextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                placeholder = { Text("Ask something...", color = secondaryText.copy(alpha = 0.5f)) },
+                placeholder = { Text("Ask your AV...", color = secondaryText.copy(alpha = 0.5f)) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = surfaceColor,
                     unfocusedContainerColor = surfaceColor,
@@ -319,17 +317,8 @@ private fun AVFoundContent(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = {
                     if (inputText.isNotBlank()) {
-                        val userMsg = ChatMessage(inputText, true)
-                        chatMessages = chatMessages + userMsg
-                        val query = inputText // capture for coroutine
+                        onSendMessage(inputText)
                         inputText = ""
-                        
-                        // Mock AI Response
-                        scope.launch {
-                            delay(1000)
-                            val response = getMockAIResponse(query)
-                            chatMessages = chatMessages + ChatMessage(response, false)
-                        }
                     }
                 })
             )
@@ -337,21 +326,14 @@ private fun AVFoundContent(
             IconButton(
                 onClick = {
                     if (inputText.isNotBlank()) {
-                        val userMsg = ChatMessage(inputText, true)
-                        chatMessages = chatMessages + userMsg
-                        val query = inputText // capture
+                        onSendMessage(inputText)
                         inputText = ""
-                        
-                        scope.launch {
-                            delay(1000)
-                            val response = getMockAIResponse(query)
-                            chatMessages = chatMessages + ChatMessage(response, false)
-                        }
                     }
                 },
                 modifier = Modifier
                     .background(Color(0xFF0A84FF), CircleShape)
-                    .size(50.dp)
+                    .size(50.dp),
+                enabled = !isAiLoading
             ) {
                 Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
             }

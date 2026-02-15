@@ -4,23 +4,25 @@ import retrofit2.http.Body
 import retrofit2.http.Headers
 import retrofit2.http.POST
 
+import com.google.gson.annotations.SerializedName
+
 // Models
 data class GroqRequest(
-    val messages: List<GroqMessage>,
-    val model: String = "llama3-8b-8192" // Default or user-selectable
+    @SerializedName("messages") val messages: List<GroqMessage>,
+    @SerializedName("model") val model: String = "llama-3.3-70b-versatile" // Updated to supported model
 )
 
 data class GroqMessage(
-    val role: String,
-    val content: String
+    @SerializedName("role") val role: String,
+    @SerializedName("content") val content: String
 )
 
 data class GroqResponse(
-    val choices: List<GroqChoice>
+    @SerializedName("choices") val choices: List<GroqChoice>
 )
 
 data class GroqChoice(
-    val message: GroqMessage
+    @SerializedName("message") val message: GroqMessage
 )
 
 // API Service
