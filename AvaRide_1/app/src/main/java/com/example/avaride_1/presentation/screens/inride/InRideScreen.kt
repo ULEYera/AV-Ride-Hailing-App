@@ -33,6 +33,9 @@ fun InRideScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showChat by remember { mutableStateOf(false) }
 
+    // Map tracking state
+    var isMapTracking by remember { mutableStateOf(true) }
+
     // Light Theme Colors
     val PrimaryText = Color(0xFF111827)
     val SecondaryText = Color(0xFF374151)
@@ -52,10 +55,34 @@ fun InRideScreen(
             destinationLat = 1.3644, // Hardcoded Changi for demo, should match VM end
             destinationLng = 103.9915,
             routePoints = uiState.routePoints,
+            isTracking = isMapTracking,
+            onUserInteraction = { isMapTracking = false },
             modifier = Modifier.fillMaxSize()
         )
 
-        // 2. Top Banner for Trip Info (Destination & ETA)
+        // 2. Map Tracking Button - positioned in visible map area (right side, below top banner)
+        FloatingActionButton(
+            onClick = { isMapTracking = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 100.dp, end = 16.dp) // Below the top banner
+                .size(44.dp),
+            containerColor = Color.White,
+            contentColor = if (isMapTracking) Color(0xFF0A84FF) else Color(0xFF666666),
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 4.dp,
+                pressedElevation = 8.dp
+            ),
+            shape = CircleShape
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = if (isMapTracking) "Tracking vehicle" else "Tap to track vehicle",
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        // 3. Top Banner for Trip Info (Destination & ETA)
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
