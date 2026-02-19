@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">AvaRide_1</string>
+
+    <!-- NFC HCE Service strings -->
+    <string name="hce_service_description">AvaRide Vehicle Unlock</string>
+    <string name="hce_aid_group_description">AvaRide Tap-to-Ride secure handshake</string>
+
+    <!-- NFC UI strings -->
+    <string name="nfc_tap_to_unlock">Tap to Unlock</string>
+    <string name="nfc_hold_phone_near">Hold your phone near the vehicle\'s NFC sensor</string>
+    <string name="nfc_scanning">Reading tag…</string>
+    <string name="nfc_unlocking">Unlocking Vehicle</string>
+    <string name="nfc_success">Unlocked!</string>
+    <string name="nfc_error_not_available">NFC is not available on this device</string>
+    <string name="nfc_error_disabled">Please enable NFC in settings</string>
+    <string name="nfc_error_session_expired">Session expired. Please try again.</string>
+    <string name="nfc_error_vehicle_mismatch">This vehicle doesn\'t match your booking</string>
+    <string name="nfc_skip_demo">Skip for Demo</string>
+    <string name="nfc_retry">Retry</string>
+    <string name="nfc_open_settings">Open NFC Settings</string>
+</resources>
