@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PB-11: Encryption in transit (TLS).
+    Blocks all cleartext (HTTP) traffic for the entire app.
+    All outbound connections must use HTTPS/TLS.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

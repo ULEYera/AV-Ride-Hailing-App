@@ -114,6 +114,12 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
+    // ZXing — QR code generation
+    implementation(libs.zxing.core)
+
+    // Security — encrypted local storage for user PII (PB-11)
+    implementation(libs.androidx.security.crypto)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

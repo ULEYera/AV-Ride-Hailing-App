@@ -41,21 +41,14 @@ fun OnboardingScreen(
     val BackgroundColor = Color.White
     val SurfaceColor = Color(0xFFF3F4F6)
 
-    // Debug: Log step changes
-    LaunchedEffect(step) {
-        println("OnboardingScreen: Step changed to $step")
-    }
-
     // Simulate OTP verification (in production, call real backend)
     fun sendOTP() {
         isVerifying = true
-        println("OnboardingScreen: Sending OTP")
         // In production: call backend API to send SMS
         // For demo: auto-advance after 2 seconds
     }
 
     fun verifyOTP() {
-        println("OnboardingScreen: Verifying OTP, code length = ${verificationCode.length}")
         // In production: verify code with backend
         // For demo: accept any 4-digit code
         if (verificationCode.length == 4) {
@@ -86,7 +79,7 @@ fun OnboardingScreen(
                 when (currentStep) {
                     0 -> WelcomeSignUpStep(
                         onGetStarted = {
-                            println("OnboardingScreen: Get Started clicked, advancing to step 1")
+                            // advance to phone number step
                             step = 1
                         },
                         primaryText = PrimaryText,
@@ -327,7 +320,6 @@ private fun OTPVerificationStep(
                     onCodeChange(it)
                     if (it.length == 4) {
                         // Auto-verify when 4 digits entered
-                        println("OTPVerificationStep: Auto-verifying code: $it")
                         onVerify()
                     }
                 }

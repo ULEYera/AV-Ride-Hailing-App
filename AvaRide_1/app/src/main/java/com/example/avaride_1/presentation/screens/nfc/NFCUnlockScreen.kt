@@ -125,7 +125,10 @@ fun NFCUnlockScreen(
                     SuccessContent()
                 }
                 NFCState.ERROR -> {
-                    ErrorContent(errorMessage ?: "Unknown error")
+                    ErrorContent(
+                        message = errorMessage ?: "Unknown error",
+                        onUseQR = onSkip
+                    )
                 }
                 NFCState.NOT_AVAILABLE, NFCState.DISABLED -> {
                     NFCDisabledContent(
@@ -255,7 +258,7 @@ private fun SuccessContent() {
 }
 
 @Composable
-private fun ErrorContent(message: String) {
+private fun ErrorContent(message: String, onUseQR: () -> Unit = {}) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -277,6 +280,14 @@ private fun ErrorContent(message: String) {
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
+        Spacer(modifier = Modifier.height(24.dp))
+        TextButton(onClick = onUseQR) {
+            Text(
+                text = "Use QR Code Instead",
+                color = Color(0xFF0A84FF),
+                fontSize = 14.sp
+            )
+        }
     }
 }
 
@@ -306,7 +317,7 @@ private fun NFCDisabledContent(message: String, onSkip: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(32.dp))
         FrostedButton(
-            text = "Skip for Demo",
+            text = "Use QR Code Instead",
             onClick = onSkip,
             modifier = Modifier.fillMaxWidth(0.7f)
         )

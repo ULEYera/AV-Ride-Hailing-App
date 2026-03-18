@@ -48,6 +48,7 @@ fun SecureNFCUnlockScreen(
     vehiclePlate: String = "",
     onUnlocked: () -> Unit,
     onSkip: () -> Unit = {},
+    onSwitchToQR: () -> Unit = {},
     viewModel: NFCUnlockViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -130,12 +131,14 @@ fun SecureNFCUnlockScreen(
                 is NFCUnlockUiState.Error -> {
                     ErrorContent(
                         message = state.message,
-                        onRetry = { viewModel.retryUnlock() }
+                        onRetry = { viewModel.retryUnlock() },
+                        onSwitchToQR = onSwitchToQR
                     )
                 }
                 is NFCUnlockUiState.NfcUnavailable -> {
                     NFCUnavailableContent(
                         message = state.message,
+                        onSwitchToQR = onSwitchToQR,
                         onSkip = onSkip
                     )
                 }
@@ -145,6 +148,7 @@ fun SecureNFCUnlockScreen(
                         onOpenSettings = {
                             context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
                         },
+                        onSwitchToQR = onSwitchToQR,
                         onSkip = onSkip
                     )
                 }
@@ -373,7 +377,8 @@ private fun SuccessContent(vehicleId: String) {
 @Composable
 private fun ErrorContent(
     message: String,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onSwitchToQR: () -> Unit = {}
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -409,12 +414,23 @@ private fun ErrorContent(
             onClick = onRetry,
             modifier = Modifier.fillMaxWidth(0.6f)
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(onClick = onSwitchToQR) {
+            Text(
+                text = "Use QR Code Instead",
+                color = Color(0xFF0A84FF),
+                fontSize = 14.sp
+            )
+        }
     }
 }
 
 @Composable
 private fun NFCUnavailableContent(
     message: String,
+    onSwitchToQR: () -> Unit,
     onSkip: () -> Unit
 ) {
     Column(
@@ -444,23 +460,23 @@ private fun NFCUnavailableContent(
             modifier = Modifier.padding(horizontal = 32.dp)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // QR code fallback would go here
-        Text(
-            text = "Use QR code instead",
-            color = Color(0xFF0A84FF),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
-
         Spacer(modifier = Modifier.height(32.dp))
 
         FrostedButton(
-            text = "Skip for Demo",
-            onClick = onSkip,
-            modifier = Modifier.fillMaxWidth(0.6f)
+            text = "Use QR Code Instead",
+            onClick = onSwitchToQR,
+            modifier = Modifier.fillMaxWidth(0.7f)
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(onClick = onSkip) {
+            Text(
+                text = "Skip for Demo",
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 14.sp
+            )
+        }
     }
 }
 
@@ -468,6 +484,7 @@ private fun NFCUnavailableContent(
 private fun NFCDisabledContent(
     message: String,
     onOpenSettings: () -> Unit,
+    onSwitchToQR: () -> Unit,
     onSkip: () -> Unit
 ) {
     Column(
@@ -505,12 +522,23 @@ private fun NFCDisabledContent(
             modifier = Modifier.fillMaxWidth(0.6f)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(onClick = onSwitchToQR) {
+            Text(
+                text = "Use QR Code Instead",
+                color = Color(0xFF0A84FF),
+                fontSize = 14.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         TextButton(onClick = onSkip) {
             Text(
                 text = "Skip for Demo",
-                color = Color.White.copy(alpha = 0.6f)
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 14.sp
             )
         }
     }

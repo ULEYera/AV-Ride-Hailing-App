@@ -37,9 +37,14 @@ class ChatViewModel : ViewModel() {
     init {
         val apiKey = BuildConfig.GROQ_API_KEY
 
-        // Logging Interceptor
+        // Logging Interceptor — body logging only in debug builds (PB-11)
         val logging = okhttp3.logging.HttpLoggingInterceptor()
-        logging.setLevel(okhttp3.logging.HttpLoggingInterceptor.Level.BODY)
+        logging.setLevel(
+            if (com.example.avaride_1.BuildConfig.DEBUG)
+                okhttp3.logging.HttpLoggingInterceptor.Level.BODY
+            else
+                okhttp3.logging.HttpLoggingInterceptor.Level.NONE
+        )
 
         val client = OkHttpClient.Builder()
             .addInterceptor(logging) // Add logging

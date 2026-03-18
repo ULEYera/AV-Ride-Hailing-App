@@ -63,13 +63,17 @@ fun AvaRideApp() {
     // Session State
     var isCheckingSession by remember { mutableStateOf(true) }
     var startDest by remember { mutableStateOf(Screen.Login.route) }
+    var currentUserId by remember { mutableStateOf("user_default") }
 
     // Check session on launch
     LaunchedEffect(Unit) {
         userPrefs.userPhoneNumber
             .distinctUntilChanged()
             .collect { phone ->
-            println("SESSION_DEBUG: Phone state changed: $phone")
+            println("SESSION_DEBUG: Phone state changed")
+            if (!phone.isNullOrBlank()) {
+                currentUserId = phone
+            }
             if (isCheckingSession) {
                 if (!phone.isNullOrBlank()) {
                     println("SESSION_DEBUG: Found existing session, starting at Home")
@@ -221,8 +225,8 @@ fun AvaRideApp() {
                 com.example.avaride_1.presentation.screens.pickup.PickupSelectionScreen(
                     destination = destination!!,
                     onPickupSelected = { pickup ->
-                        println("PickupSelection: Pickup selected - ${pickup.name}")
-                        println("PickupSelection: Destination - ${destination!!.name}")
+                        println("PickupSelection: Pickup selected")
+                        println("PickupSelection: Destination set")
                         // Save pickup to ViewModel
                         bookingViewModel.setPickup(pickup)
                         println("PickupSelection: Data saved to ViewModel")
@@ -263,7 +267,7 @@ fun AvaRideApp() {
             val destination by bookingViewModel.destination.collectAsState()
             val pickup by bookingViewModel.pickup.collectAsState()
 
-            println("BookingConfirmation: destination=$destination, pickup=$pickup")
+            println("BookingConfirmation: validating booking data")
 
             if (destination != null && pickup != null) {
                 com.example.avaride_1.presentation.screens.confirm.BookingConfirmationScreen(
@@ -373,15 +377,18 @@ fun AvaRideApp() {
         }
 
         composable(Screen.NFCUnlock.route) {
+            val userId = currentUserId
             com.example.avaride_1.presentation.screens.nfc.NFCUnlockScreen(
                 onUnlocked = {
                     bookingViewModel.clearBookingData()
                     navController.navigate(Screen.InRide.route)
                 },
                 onSkip = {
-                    // Allow skipping if NFC not available (demo mode)
-                    bookingViewModel.clearBookingData()
-                    navController.navigate(Screen.InRide.route)
+                    // NFC unavailable/failed — route to QR fallback
+                    val tripId = "trip_${System.currentTimeMillis()}"
+                    navController.navigate(
+                        Screen.QRUnlock.createRoute(tripId, "AV_001", userId)
+                    )
                 }
             )
         }
@@ -411,9 +418,16 @@ fun AvaRideApp() {
                     }
                 },
                 onSkip = {
+                    // Explicit "skip everything" bypass — demo only
                     navController.navigate(Screen.InRide.route) {
                         popUpTo(Screen.Home.route) { inclusive = false }
                     }
+                },
+                onSwitchToQR = {
+                    // NFC failed or unavailable — route to QR fallback with real booking IDs
+                    navController.navigate(
+                        Screen.QRUnlock.createRoute(tripId, vehicleId, userId)
+                    )
                 }
             )
         }
@@ -435,9 +449,10 @@ fun AvaRideApp() {
                 tripId = tripId,
                 vehicleId = vehicleId,
                 userId = userId,
-                sessionToken = "demo_token_${System.currentTimeMillis()}",
-                expiresAt = System.currentTimeMillis() + 5 * 60 * 1000, // 5 minutes
+                sessionToken = java.util.UUID.randomUUID().toString(),
+                expiresAt = System.currentTimeMillis() + 5 * 60 * 1000L, // 5 minutes
                 onUnlocked = {
+                    bookingViewModel.clearBookingData()
                     navController.navigate(Screen.InRide.route) {
                         popUpTo(Screen.Home.route) { inclusive = false }
                     }

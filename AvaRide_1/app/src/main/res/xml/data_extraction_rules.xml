@@ -1,19 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PB-11: Data extraction exclusions for API 31+ devices.
+
+    Mirrors backup_rules.xml for the newer backup/restore framework.
+    user_secure_prefs.xml — EncryptedSharedPreferences (device-bound key; useless on restore).
+    datastore/            — Legacy plaintext DataStore (no longer written to).
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="user_secure_prefs.xml" />
+        <exclude domain="file" path="datastore" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="user_secure_prefs.xml" />
+        <exclude domain="file" path="datastore" />
     </device-transfer>
-    -->
 </data-extraction-rules>

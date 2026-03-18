@@ -19,7 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.avaride_1.presentation.components.FrostedButton
 import com.example.avaride_1.presentation.components.GlowingMeshGradient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * QR Code Unlock Screen - Fallback for devices without NFC
@@ -38,13 +40,18 @@ fun QRUnlockScreen(
     onSwitchToNFC: () -> Unit = {},
     onCancel: () -> Unit = {}
 ) {
+    // Mutable token and expiry so the QR can be refreshed without re-navigating
+    var currentToken by remember { mutableStateOf(sessionToken) }
+    var currentExpiresAt by remember { mutableStateOf(expiresAt) }
+
     var remainingSeconds by remember { mutableStateOf(0L) }
     var isExpired by remember { mutableStateOf(false) }
 
-    // Countdown timer
-    LaunchedEffect(expiresAt) {
+    // Countdown timer — restarts whenever the token is refreshed
+    LaunchedEffect(currentExpiresAt) {
+        isExpired = false
         while (true) {
-            val remaining = (expiresAt - System.currentTimeMillis()) / 1000
+            val remaining = (currentExpiresAt - System.currentTimeMillis()) / 1000
             remainingSeconds = maxOf(0, remaining)
             isExpired = remaining <= 0
             if (remaining <= 0) break
@@ -52,14 +59,18 @@ fun QRUnlockScreen(
         }
     }
 
-    // Generate QR code data
-    val qrData = remember(tripId, sessionToken) {
-        buildQRData(tripId, vehicleId, userId, sessionToken)
+    // QR data encodes booking context + one-time token
+    val qrData = remember(tripId, currentToken) {
+        buildQRData(tripId, vehicleId, userId, currentToken)
     }
 
-    // Generate QR bitmap
-    val qrBitmap = remember(qrData) {
-        generateQRBitmap(qrData, 300)
+    // Generate the real QR bitmap on a background thread via ZXing
+    var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(qrData) {
+        qrBitmap = null // clear stale bitmap while generating
+        qrBitmap = withContext(Dispatchers.Default) {
+            generateQRBitmap(qrData, 300)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -104,7 +115,10 @@ fun QRUnlockScreen(
                     vehicleId = vehicleId
                 )
             } else if (isExpired) {
-                ExpiredContent(onRefresh = { /* Regenerate token */ })
+                ExpiredContent(onRefresh = {
+                    currentToken = java.util.UUID.randomUUID().toString()
+                    currentExpiresAt = System.currentTimeMillis() + 5 * 60 * 1000L
+                })
             } else {
                 // Loading
                 CircularProgressIndicator(
@@ -126,7 +140,26 @@ fun QRUnlockScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Confirm button — user taps after the vehicle's camera reads the QR
+            if (!isExpired && qrBitmap != null) {
+                FrostedButton(
+                    text = "Confirm Entry",
+                    onClick = onUnlocked,
+                    modifier = Modifier.fillMaxWidth(0.7f)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Tap after the vehicle scanner reads your code",
+                    color = Color.White.copy(alpha = 0.4f),
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             // Switch to NFC button
             TextButton(onClick = onSwitchToNFC) {
@@ -277,76 +310,37 @@ private fun buildQRData(
 }
 
 /**
- * Generate QR code bitmap
- * Note: In production, use ZXing or ML Kit for QR generation
+ * Generate a real, scannable QR code bitmap using ZXing.
+ * Encodes [data] as QR_CODE at [size] × [size] pixels.
+ * Must be called from a background thread (use Dispatchers.Default).
  */
 private fun generateQRBitmap(data: String, size: Int): Bitmap? {
     return try {
-        // Placeholder - in production use com.google.zxing:core
-        // For now, create a simple placeholder bitmap
+        val hints = mapOf(
+            com.google.zxing.EncodeHintType.MARGIN to 1,
+            com.google.zxing.EncodeHintType.ERROR_CORRECTION to
+                com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
+        )
+        val bitMatrix = com.google.zxing.MultiFormatWriter().encode(
+            data,
+            com.google.zxing.BarcodeFormat.QR_CODE,
+            size,
+            size,
+            hints
+        )
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-
-        // Draw a simple pattern (would be replaced with actual QR generation)
-        val canvas = android.graphics.Canvas(bitmap)
-        canvas.drawColor(android.graphics.Color.WHITE)
-
-        val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.BLACK
-            style = android.graphics.Paint.Style.FILL
-        }
-
-        // Draw placeholder pattern
-        val blockSize = size / 21f
-
-        // Position detection patterns (corners)
-        drawPositionPattern(canvas, paint, 0f, 0f, blockSize)
-        drawPositionPattern(canvas, paint, (size - 7 * blockSize), 0f, blockSize)
-        drawPositionPattern(canvas, paint, 0f, (size - 7 * blockSize), blockSize)
-
-        // Draw some data modules (simplified)
-        val hash = data.hashCode()
-        for (i in 8 until 13) {
-            for (j in 8 until 13) {
-                if ((hash + i + j) % 2 == 0) {
-                    canvas.drawRect(
-                        i * blockSize, j * blockSize,
-                        (i + 1) * blockSize, (j + 1) * blockSize,
-                        paint
-                    )
-                }
+        for (x in 0 until size) {
+            for (y in 0 until size) {
+                bitmap.setPixel(
+                    x, y,
+                    if (bitMatrix[x, y]) android.graphics.Color.BLACK
+                    else android.graphics.Color.WHITE
+                )
             }
         }
-
         bitmap
     } catch (e: Exception) {
         null
     }
-}
-
-private fun drawPositionPattern(
-    canvas: android.graphics.Canvas,
-    paint: android.graphics.Paint,
-    x: Float,
-    y: Float,
-    blockSize: Float
-) {
-    // Outer square
-    canvas.drawRect(x, y, x + 7 * blockSize, y + 7 * blockSize, paint)
-
-    // Inner white square
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawRect(
-        x + blockSize, y + blockSize,
-        x + 6 * blockSize, y + 6 * blockSize,
-        paint
-    )
-
-    // Center square
-    paint.color = android.graphics.Color.BLACK
-    canvas.drawRect(
-        x + 2 * blockSize, y + 2 * blockSize,
-        x + 5 * blockSize, y + 5 * blockSize,
-        paint
-    )
 }
 

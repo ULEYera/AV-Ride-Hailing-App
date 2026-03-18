@@ -26,12 +26,10 @@ class BookingViewModel : ViewModel() {
     val arrivalTime: StateFlow<Long?> = _arrivalTime.asStateFlow()
 
     fun setDestination(destination: SearchLocation) {
-        println("BookingViewModel: Setting destination - ${destination.name}")
         _destination.value = destination
     }
 
     fun setPickup(pickup: PickupPoint) {
-        println("BookingViewModel: Setting pickup - ${pickup.name}")
         _pickup.value = pickup
     }
 
@@ -46,7 +44,6 @@ class BookingViewModel : ViewModel() {
     }
 
     fun clearBookingData() {
-        println("BookingViewModel: Clearing booking data")
         _destination.value = null
         _pickup.value = null
         _isRideActive.value = false

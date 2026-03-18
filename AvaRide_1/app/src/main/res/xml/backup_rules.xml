@@ -1,13 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PB-11: Backup exclusions for local PII storage.
+
+    user_secure_prefs.xml  — EncryptedSharedPreferences file (keys wrapped in Android Keystore;
+                              the backing XML is safe but the Keystore key is device-bound,
+                              so restoring the file to another device is useless — exclude anyway).
+    datastore/             — Legacy plaintext DataStore directory (no longer written to, but may
+                              still exist on devices that ran an older build).
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="sharedpref" path="user_secure_prefs.xml" />
+    <exclude domain="file" path="datastore" />
 </full-backup-content>
